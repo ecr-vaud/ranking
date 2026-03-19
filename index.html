@@ -832,6 +832,12 @@ header p { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
 }
 
 .medal-gold { filter: hue-rotate(0deg) saturate(1.5) brightness(1.15) sepia(0.3); display:inline-block; }
+
+.rk-label-short { display: none; }
+@media (max-width: 600px) {
+  .rk-label-full { display: none; }
+  .rk-label-short { display: inline; }
+}
 </style>
 </head>
 <body>
@@ -1362,7 +1368,7 @@ function buildRanking() {
   const gridCols = showTR ? '90px 1fr 120px 95px' : '90px 1fr 120px';
   header.style.gridTemplateColumns = gridCols;
   header.innerHTML = `
-    <div style="font-size:0.68rem">${t('col_rank')}</div>
+    <div style="font-size:0.68rem"><span class="rk-label-full">${t('col_rank')}</span><span class="rk-label-short">#</span></div>
     <div>${t('col_etablissement')}</div>
     <div style="text-align:center;white-space:nowrap">${colHead}</div>
     ${showTR ? `<div style="text-align:center;white-space:nowrap">${t('col_taux')}</div>` : ''}`;
@@ -2009,18 +2015,16 @@ buildList();
 buildRanking();
 switchTab('rankingPanel');
 
-// Visitor counter
+// Visitor counter — using api.counterapi.dev (free, no signup)
 async function initVisitorCounter() {
   try {
-    // Increment on each visit
-    const res = await fetch('https://api.countapi.xyz/hit/ecr-vaud-dashboard/visits');
+    const res = await fetch('https://api.counterapi.dev/v1/ecr-vaud/visits/up');
     const data = await res.json();
     const el = document.getElementById('visitorCount');
-    if (el && data.value) {
-      el.textContent = data.value.toLocaleString('fr-CH') + ' visite' + (data.value > 1 ? 's' : '');
+    if (el && data.count != null) {
+      el.textContent = data.count.toLocaleString('fr-CH') + ' visite' + (data.count > 1 ? 's' : '');
     }
   } catch (e) {
-    // Silently fail if API unavailable
     const el = document.getElementById('visitorCounter');
     if (el) el.style.display = 'none';
   }
