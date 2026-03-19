@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECR Vaud 2021–2025 · Tableau de bord</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface2: #f0f3ff;
+  --border: #dde2f0;
+  --text: #1a1d2e;
+  --text-muted: #7b82a0;
+  --accent: #4f46e5;
+  --accent2: #7c3aed;
+  --gold: #f59e0b;
+  --green: #16a34a;
+  --red: #dc2626;
+  --purple: #7c3aed;
+  --grade-top: #16a34a;
+  --grade-mid: #d97706;
+  --grade-low: #dc2626;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* HEADER */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 100;
+}
+header h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.5rem;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+header p { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+.canton-badge {
+  display: flex; gap: 20px;
+}
+.canton-badge .stat {
+  text-align: center;
+  padding: 8px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.canton-badge .stat .val {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'DM Serif Display', serif;
+}
+.canton-badge .stat .lbl {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* LAYOUT */
+.layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  height: calc(100vh - 73px);
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.filters {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.filter-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  transition: all 0.15s;
+  text-align: center;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+.search-box {
+  position: relative;
+}
+.search-box input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 32px 8px 32px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-box input:focus { border-color: var(--accent); }
+.search-box::before {
+  content: '🔍';
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+}
+
+.sort-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.sort-row label { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.sort-row select {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+
+.schools-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.schools-list::-webkit-scrollbar { width: 4px; }
+.schools-list::-webkit-scrollbar-track { background: transparent; }
+.schools-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.school-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.school-card:hover { background: var(--surface2); border-color: var(--border); }
+.school-card.selected { background: var(--surface2); border-color: var(--accent); }
+
+.rank-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.rank-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+.rank-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; }
+.rank-3 { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: #fff; }
+.rank-other { background: var(--border); color: var(--text-muted); }
+
+.school-info { flex: 1; min-width: 0; }
+.school-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.school-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+.score-pill {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+/* MAIN */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.tab {
+  padding: 7px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.panel { flex: 1; overflow: hidden; display: none; }
+.panel.active { display: flex; flex-direction: column; }
+
+/* MAP */
+#map {
+  flex: 1;
+  width: 100%;
+}
+
+/* DETAIL PANEL */
+.detail-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.detail-panel::-webkit-scrollbar { width: 4px; }
+.detail-panel::-webkit-scrollbar-track { background: transparent; }
+.detail-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.6rem;
+  color: var(--text);
+  line-height: 1.2;
+}
+.detail-type {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.rank-big {
+  text-align: right;
+}
+.rank-big .rank-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.rank-big .rank-lbl { font-size: 0.72rem; color: var(--text-muted); }
+
+.scores-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.score-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.score-card .year { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.score-card .big-score {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 4px 0;
+  line-height: 1;
+}
+.score-card .avg-note { font-size: 0.75rem; color: var(--text-muted); }
+.score-card .tr-row { 
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+.tr-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tr-fill { height: 100%; border-radius: 2px; }
+
+.section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  margin-top: 20px;
+}
+
+.subject-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.subject-row {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.subject-row .s-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.subject-row .s-name { font-size: 0.8rem; font-weight: 500; }
+.subject-row .s-score { font-size: 0.9rem; font-weight: 700; }
+.year-bars { display: flex; gap: 4px; align-items: flex-end; height: 40px; }
+.year-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.year-bar-bg {
+  width: 100%;
+  background: var(--border);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+  overflow: hidden;
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+}
+.year-bar-fill { width: 100%; border-radius: 3px 3px 0 0; transition: height 0.4s; }
+.year-lbl { font-size: 0.6rem; color: var(--text-muted); }
+
+/* RANKING TABLE */
+.ranking-panel { padding: 20px; overflow-y: auto; flex: 1; }
+.ranking-panel::-webkit-scrollbar { width: 4px; }
+.ranking-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+.ranking-header {
+  display: grid;
+  grid-template-columns: 90px 1fr 120px 95px;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.ranking-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 120px 95px;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+  align-items: center;
+  border: 1px solid transparent;
+}
+.ranking-row:hover { background: var(--surface2); }
+.ranking-row.selected { background: var(--surface2); border-color: var(--accent); }
+.ranking-row .rk { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-align: center; }
+.ranking-row .rname { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ranking-row .rscore {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.canton-line {
+  background: rgba(79, 70, 229, 0.06);
+  border: 1px solid rgba(79, 70, 229, 0.25) !important;
+  grid-template-columns: 40px 1fr 80px 80px 80px 90px;
+}
+
+/* PLACEHOLDER */
+.detail-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+.detail-placeholder .icon { font-size: 3rem; opacity: 0.3; }
+.detail-placeholder p { font-size: 0.9rem; max-width: 280px; line-height: 1.5; }
+
+/* MAP popup */
+
+
+
+/* TOOLTIP */
+.score-tooltip {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  pointer-events: none;
+  z-index: 9999;
+  display: none;
+}
+
+/* SUBJECT RANKING BAR */
+.ranking-subject-bar {
+  display: flex;
+  gap: 6px;
+  padding: 12px 20px 0;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+.subj-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.subj-btn:hover { border-color: var(--accent); color: var(--accent); }
+.subj-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* RANKING PANEL overrides for subject mode */
+.ranking-header.subj-mode {
+  grid-template-columns: 40px 1fr 90px 90px 90px !important;
+}
+.ranking-row.subj-mode {
+  grid-template-columns: 40px 1fr 90px 90px 90px !important;
+}
+.highlight-col {
+  background: var(--accent);
+  color: #fff !important;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+/* YEAR SELECTOR (Moyenne mode) */
+.ranking-year-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 20px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ranking-year-bar .yr-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-right: 4px;
+}
+.yr-btn {
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.yr-btn:hover { border-color: var(--accent); color: var(--accent); }
+.yr-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* SIDEBAR FILTER SECTION LABELS */
+.filter-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  padding: 4px 0 2px;
+}
+/* Tight chip-style buttons for year/subject */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+.chip-btn {
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.13s;
+  white-space: nowrap;
+}
+.chip-btn:hover { border-color: var(--accent); color: var(--accent); }
+.chip-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.filter-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+#cantonRow .ranking-row {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+  border: 1px solid #dde2f0 !important;
+}
+.leaflet-popup-content { margin: 12px 14px !important; }
+.leaflet-popup-tip { background: white !important; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Mobile responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 {
+    font-size: 1rem;
+  }
+  header p {
+    font-size: 0.65rem;
+  }
+  header > div:last-child {
+    gap: 6px;
+  }
+  header button {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: calc(100vh - 60px);
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: none;
+    overflow: visible;
+  }
+
+  .filters {
+    padding: 10px 12px;
+  }
+
+  .chip-row {
+    flex-wrap: wrap;
+  }
+
+  .schools-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .main {
+    height: calc(100vh - 60px);
+  }
+
+  .tabs {
+    padding: 8px 12px;
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .tab {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  .panel {
+    height: calc(100vh - 120px);
+  }
+
+  .ranking-panel {
+    padding: 10px 12px;
+  }
+
+  .ranking-row, .ranking-header {
+    grid-template-columns: 60px 1fr 90px !important;
+    font-size: 0.78rem;
+  }
+
+  .ranking-row .rscore, .ranking-header div:last-child {
+    display: none;
+  }
+
+  .ranking-row .rscore:nth-child(3), .ranking-header div:nth-child(3) {
+    display: flex !important;
+  }
+
+  #map {
+    height: calc(100vh - 120px);
+  }
+
+  .detail-panel {
+    padding: 12px;
+  }
+
+  /* Detail grade cards — stack vertically on small screens */
+  div[style*="grid-template-columns:repeat(3"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* Guide modal */
+  #helpModal > div {
+    width: 95vw !important;
+    max-height: 90vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .schools-list {
+    max-height: 150px;
+  }
+  header h1 {
+    font-size: 0.88rem;
+  }
+}
+
+/* ── Mobile responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  header h1 { font-size: 1rem; }
+  header p { font-size: 0.65rem; }
+  #headerSubtitle2 { display: none; }
+
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: calc(100vh - 56px);
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 44vh;
+    overflow-y: auto;
+  }
+
+  .filters {
+    padding: 10px 12px 6px;
+  }
+
+  .schools-list {
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  .main {
+    height: calc(56vh);
+    overflow: hidden;
+  }
+
+  .tabs {
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .panel {
+    overflow-y: auto;
+  }
+
+  /* Ranking */
+  .ranking-panel { padding: 10px; }
+  .ranking-row { font-size: 0.78rem; }
+  .rname { font-size: 0.78rem; }
+  .rscore { font-size: 0.78rem; padding: 3px 6px; }
+
+  /* Detail */
+  .detail-panel { padding: 12px; }
+
+  /* Map */
+  #map { min-height: 300px; }
+
+  /* Help modal */
+  #helpModal > div {
+    width: 95vw !important;
+    max-height: 90vh !important;
+  }
+
+  /* Visitor counter - hide on mobile */
+  #visitorCounter { display: none; }
+}
+
+@media (max-width: 480px) {
+  .chip-row { gap: 4px; }
+  .chip-btn { font-size: 0.68rem; padding: 3px 7px; }
+  .filter-btn { font-size: 0.72rem; padding: 5px 7px; }
+}
+
+.medal-gold { filter: hue-rotate(0deg) saturate(1.5) brightness(1.15) sepia(0.3); display:inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1 onclick="resetFilters()" style="cursor:pointer" title="Réinitialiser les filtres">ECR Vaud · Épreuves Cantonales de Référence</h1>
+    <p>80 établissements · 2021–2025 · Canton de Vaud</p>
+    <p id="headerSubtitle2" style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">
+      Notes moyennes par établissement aux ECR de français, mathématiques et allemand (4P, 6P, 8P) entre 2021 et 2025. 
+      Source : <a href="https://www.vd.ch/index.php?id=2020663#c2085751" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:500">État de Vaud – DEF</a>
+    </p>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="document.getElementById('helpModal').style.display='flex'" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-size:0.78rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+      <span style="font-size:0.9rem">❓</span> Guide
+    </button>
+    <button id="langToggle" onclick="toggleLang()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-size:0.78rem;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;font-weight:600" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">🇬🇧 EN</button>
+  </div>
+  <div id="visitorCounter" style="font-size:0.68rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;opacity:0.7">
+    <span style="width:6px;height:6px;border-radius:50%;background:#16a34a;display:inline-block;animation:pulse 2s infinite"></span>
+    <span id="visitorCount">—</span> visites
+  </div>
+</header>
+
+<!-- Help Modal -->
+<div id="helpModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.35);backdrop-filter:blur(3px)" onclick="if(event.target===this)this.style.display='none'">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(680px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+    <div style="padding:22px 26px 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding-bottom:14px;z-index:1">
+      <div>
+        <div class="guide-title" style="font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--text)">Guide d'utilisation</div>
+        <div style="font-size:0.73rem;color:var(--text-muted);margin-top:2px" id="guideSubtitle">ECR Vaud · Tableau de bord des résultats</div>
+      </div>
+      <button onclick="document.getElementById('helpModal').style.display='none'" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-muted);padding:4px 8px;border-radius:6px">✕</button>
+    </div>
+    <div style="padding:20px 26px;display:flex;flex-direction:column;gap:18px">
+
+      <!-- Section 1 -->
+      <div>
+        <div class="guide-section-title" style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px">① Filtres (colonne gauche)</div>
+        <div id="guide-body-1" style="font-size:0.82rem;color:var(--text);line-height:1.6">
+          <b>Recherche</b> — Saisissez le nom d'un établissement pour le retrouver dans la liste. Un bouton <b>✕</b> permet d'effacer la recherche en un clic. Dans le Classement, les établissements correspondants sont mis en évidence (rang fixe). Cliquez sur le <b>titre</b> pour réinitialiser tous les filtres.<br><b>Année scolaire</b> — Filtrez par degré : <b>4P</b>, <b>6P</b>, <b>8P</b> ou <b>Tout</b> (moyenne de tous les degrés disponibles).<br><b>Matière</b> — Choisissez entre Français, Maths, Allemand ou la moyenne générale (<b>Tout</b>). Notez que les maths et l'allemand ne sont pas disponibles pour tous les degrés.<br><b>Année</b> — Sélectionnez une année de 2021 à 2025, ou la moyenne sur 5 ans (<b>Moy. 21–25</b>).<br><br>Les trois filtres agissent simultanément sur la liste, le Classement et la Carte.
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border)"></div>
+
+      <!-- Section 2 -->
+      <div>
+        <div class="guide-section-title" style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px">② Classement</div>
+        <div id="guide-body-2" style="font-size:0.82rem;color:var(--text);line-height:1.6">
+          Affiche le classement de tous les établissements selon les filtres actifs. La <b>colonne de score</b> correspond à la combinaison degré + matière + année.<br>La colonne <b>Taux de réussite</b> n'apparaît que lorsque l'année 2025 et la matière <b>Tout</b> sont sélectionnées.<br>La ligne <b>Canton</b> (en haut, fixe) indique la moyenne cantonale de référence.<br>La <b>recherche</b> met en évidence les établissements correspondants sans modifier les rangs — le rang reste fixe.<br>Lorsque les filtres <b>Tout + Tout</b> sont actifs, des médailles 🥇🥈🥉 apparaissent à côté des établissements ayant été classés 1er, 2e ou 3e lors d'une ou plusieurs années.
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border)"></div>
+
+      <!-- Section 3 -->
+      <div>
+        <div class="guide-section-title" style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px">③ Détail</div>
+        <div id="guide-body-3" style="font-size:0.82rem;color:var(--text);line-height:1.6">
+          Cliquez sur un établissement dans la liste ou le Classement pour afficher sa fiche détaillée. Le nom de l'école affiche ses médailles 🥇🥈🥉 basées sur la moyenne 2021–2025.<br><b>Résultats 2025 par année</b> — Note 2025, rang et taux de réussite pour chaque degré (4P, 6P, 8P).<br><b>Détail par année 2021–2025</b> — Pour chaque degré : moyenne sur 5 ans, rang, et graphique avec score et rang par année.<br><b>Détail par matière 2021–2025</b> — Même présentation par matière (français, maths, allemand) : moyenne 5 ans, rang, graphique annuel.
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border)"></div>
+
+      <!-- Section 4 -->
+      <div>
+        <div class="guide-section-title" style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px">④ Carte</div>
+        <div id="guide-body-4" style="font-size:0.82rem;color:var(--text);line-height:1.6">
+          Visualise les 80 établissements sur la carte du canton de Vaud (OpenStreetMap). Chaque point indique le score de l'établissement selon les filtres actifs, avec le même code couleur que le Classement. Les établissements sans données pour le filtre actif sont masqués. Cliquez sur un point pour afficher le score, le rang, et accéder à la fiche détaillée.
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border)"></div>
+
+      <!-- Section 5 -->
+      <div>
+        <div class="guide-section-title" style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:8px">⑤ Code couleur des scores</div>
+        <div id="guide-body-5" style="font-size:0.82rem;color:var(--text);line-height:1.6;display:flex;flex-direction:column;gap:5px">
+          <div>Les couleurs reflètent le <b>rang relatif</b> de chaque score parmi tous les établissements pour ce même indicateur :</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#16a34a;display:inline-block"></span><b>Top 20%</b></span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#4ade80;display:inline-block"></span><b>Top 40%</b></span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#facc15;display:inline-block"></span><b>Médian</b></span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#fb923c;display:inline-block"></span><b>Bas 40%</b></span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#f87171;display:inline-block"></span><b>Bas 20%</b></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="filters">
+      <!-- Search -->
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Rechercher un établissement...">
+        <button id="searchClear" onclick="clearSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:var(--text-muted);border:none;cursor:pointer;color:white;font-size:0.7rem;line-height:1;padding:0;display:none;border-radius:50%;z-index:10;align-items:center;justify-content:center;font-weight:700;opacity:0.6" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'" title="Effacer">✕</button>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <!-- Année scolaire (grade) -->
+      <div class="filter-section-label">Année scolaire</div>
+      <div class="chip-row">
+        <button class="filter-btn" data-grade="4P">4P</button>
+        <button class="filter-btn" data-grade="6P">6P</button>
+        <button class="filter-btn" data-grade="8P">8P</button>
+        <button class="filter-btn active" data-grade="all">Tout</button>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <!-- Matière (subject) -->
+      <div class="filter-section-label">Matière</div>
+      <div class="chip-row">
+        <button class="chip-btn" data-sidebar-subj="FR">Français</button>
+        <button class="chip-btn" data-sidebar-subj="MA">Maths</button>
+        <button class="chip-btn" data-sidebar-subj="DE">Allemand</button>
+        <button class="chip-btn active" data-sidebar-subj="avg">Tout</button>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <!-- Année (year) -->
+      <div class="filter-section-label">Année</div>
+      <div class="chip-row">
+        <button class="chip-btn" data-sidebar-yr="2025">2025</button>
+        <button class="chip-btn" data-sidebar-yr="2024">2024</button>
+        <button class="chip-btn" data-sidebar-yr="2023">2023</button>
+        <button class="chip-btn" data-sidebar-yr="2022">2022</button>
+        <button class="chip-btn" data-sidebar-yr="2021">2021</button>
+        <button class="chip-btn active" data-sidebar-yr="avg2125">Moy. 21-25</button>
+      </div>
+
+
+    </div>
+    <div class="schools-list" id="schoolsList"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" data-panel="rankingPanel">📊 Classement</div>
+      <div class="tab" data-panel="detailPanel">📋 Détail</div>
+      <div class="tab" data-panel="mapPanel">🗺 Carte</div>
+    </div>
+
+    <!-- MAP PANEL -->
+    <div class="panel" id="mapPanel">
+      <div id="map" style="flex:1;width:100%"></div>
+    </div>
+
+    <!-- RANKING PANEL -->
+    <div class="panel active" id="rankingPanel">
+      <div class="ranking-panel">
+        <div class="ranking-header" id="rankingHeader"></div>
+        <div id="cantonRow"></div>
+        <div id="rankingBody"></div>
+      </div>
+    </div>
+
+    <!-- DETAIL PANEL -->
+    <div class="panel" id="detailPanel">
+      <div class="detail-panel" id="detailContent">
+        <div class="detail-placeholder">
+          <div class="icon">🏫</div>
+          <p data-i18n-placeholder>Sélectionnez un établissement dans la liste pour voir ses résultats détaillés.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="score-tooltip" id="tooltip"></div>
+
+<script>
+const SCHOOLS_DATA = [{"name": "Lausanne - Beaulieu", "type": "1-6", "avg_4P_2025": 5.3, "avg_6P_2025": 5.2, "avg_8P_2025": null, "avg_4P_2125": 5.22, "avg_6P_2125": 5.06, "avg_8P_2125": null, "4P_FR_2025": 5.3, "4P_FR_2024": 5.28, "4P_FR_2023": 5.2, "4P_FR_2022": 5.23, "4P_FR_2021": 5.07, "6P_FR_2025": 5.26, "6P_FR_2024": 5.18, "6P_FR_2023": 4.88, "6P_FR_2022": 5.01, "6P_FR_2021": 5.12, "6P_MA_2025": 5.14, "6P_MA_2024": 4.89, "6P_MA_2023": 4.88, "6P_MA_2022": 5.01, "6P_MA_2021": 5.17, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 95.0, "tr_6P": 97.1, "tr_8P": null, "lat": 46.5247, "lng": 6.643}, {"name": "Lausanne - Coteau Fleuri", "type": "1-6", "avg_4P_2025": 5.14, "avg_6P_2025": 4.87, "avg_8P_2025": null, "avg_4P_2125": 5.0, "avg_6P_2125": 4.91, "avg_8P_2125": null, "4P_FR_2025": 5.14, "4P_FR_2024": 5.11, "4P_FR_2023": 4.94, "4P_FR_2022": 4.92, "4P_FR_2021": 4.89, "6P_FR_2025": 4.84, "6P_FR_2024": 5.03, "6P_FR_2023": 4.92, "6P_FR_2022": 4.82, "6P_FR_2021": 5.15, "6P_MA_2025": 4.9, "6P_MA_2024": 4.7, "6P_MA_2023": 4.81, "6P_MA_2022": 4.79, "6P_MA_2021": 5.09, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 91.4, "tr_6P": 94.8, "tr_8P": null, "lat": 46.5312, "lng": 6.6172}, {"name": "Lausanne - Entre-Bois", "type": "1-6", "avg_4P_2025": 4.87, "avg_6P_2025": 4.83, "avg_8P_2025": null, "avg_4P_2125": 4.79, "avg_6P_2125": 4.79, "avg_8P_2125": null, "4P_FR_2025": 4.87, "4P_FR_2024": 4.51, "4P_FR_2023": 5.02, "4P_FR_2022": 4.73, "4P_FR_2021": 4.8, "6P_FR_2025": 4.91, "6P_FR_2024": 4.79, "6P_FR_2023": 4.89, "6P_FR_2022": 4.71, "6P_FR_2021": 4.98, "6P_MA_2025": 4.75, "6P_MA_2024": 4.5, "6P_MA_2023": 4.79, "6P_MA_2022": 4.67, "6P_MA_2021": 4.93, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 89.7, "tr_6P": 94.6, "tr_8P": null, "lat": 46.5188, "lng": 6.6073}, {"name": "Lausanne - Floréal", "type": "1-6", "avg_4P_2025": 5.02, "avg_6P_2025": 4.9, "avg_8P_2025": null, "avg_4P_2125": 5.1, "avg_6P_2125": 4.95, "avg_8P_2125": null, "4P_FR_2025": 5.02, "4P_FR_2024": 5.1, "4P_FR_2023": 5.22, "4P_FR_2022": 5.03, "4P_FR_2021": 5.11, "6P_FR_2025": 4.93, "6P_FR_2024": 5.08, "6P_FR_2023": 5.1, "6P_FR_2022": 4.63, "6P_FR_2021": 5.18, "6P_MA_2025": 4.87, "6P_MA_2024": 4.77, "6P_MA_2023": 5.1, "6P_MA_2022": 4.57, "6P_MA_2021": 5.24, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 86.0, "tr_6P": 93.0, "tr_8P": null, "lat": 46.5279, "lng": 6.6458}, {"name": "Lausanne - La Sallaz", "type": "1-6", "avg_4P_2025": 5.12, "avg_6P_2025": 4.98, "avg_8P_2025": null, "avg_4P_2125": 4.99, "avg_6P_2125": 5.03, "avg_8P_2125": null, "4P_FR_2025": 5.12, "4P_FR_2024": 5.05, "4P_FR_2023": 4.96, "4P_FR_2022": 4.89, "4P_FR_2021": 4.92, "6P_FR_2025": 5.0, "6P_FR_2024": 5.15, "6P_FR_2023": 4.93, "6P_FR_2022": 4.95, "6P_FR_2021": 5.08, "6P_MA_2025": 4.95, "6P_MA_2024": 4.92, "6P_MA_2023": 5.16, "6P_MA_2022": 5.04, "6P_MA_2021": 5.16, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 94.8, "tr_6P": 95.5, "tr_8P": null, "lat": 46.5372, "lng": 6.6499}, {"name": "Lausanne - Mon-Repos", "type": "1-6", "avg_4P_2025": 5.41, "avg_6P_2025": 5.08, "avg_8P_2025": null, "avg_4P_2125": 5.24, "avg_6P_2125": 5.14, "avg_8P_2125": null, "4P_FR_2025": 5.41, "4P_FR_2024": 5.4, "4P_FR_2023": 5.23, "4P_FR_2022": 5.17, "4P_FR_2021": 4.98, "6P_FR_2025": 5.14, "6P_FR_2024": 5.32, "6P_FR_2023": 5.07, "6P_FR_2022": 5.03, "6P_FR_2021": 5.28, "6P_MA_2025": 5.03, "6P_MA_2024": 5.03, "6P_MA_2023": 5.15, "6P_MA_2022": 5.13, "6P_MA_2021": 5.19, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 96.3, "tr_6P": 96.7, "tr_8P": null, "lat": 46.5224, "lng": 6.6317}, {"name": "Lausanne - Pierrefleur", "type": "1-6", "avg_4P_2025": 5.0, "avg_6P_2025": 4.84, "avg_8P_2025": null, "avg_4P_2125": 4.85, "avg_6P_2125": 4.81, "avg_8P_2125": null, "4P_FR_2025": 5.0, "4P_FR_2024": 4.93, "4P_FR_2023": 5.04, "4P_FR_2022": 4.34, "4P_FR_2021": 4.96, "6P_FR_2025": 5.0, "6P_FR_2024": 4.84, "6P_FR_2023": 4.77, "6P_FR_2022": 4.79, "6P_FR_2021": 4.99, "6P_MA_2025": 4.67, "6P_MA_2024": 4.52, "6P_MA_2023": 4.75, "6P_MA_2022": 4.67, "6P_MA_2021": 5.09, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 86.7, "tr_6P": 94.1, "tr_8P": null, "lat": 46.5148, "lng": 6.6264}, {"name": "Lausanne - Prélaz", "type": "1-6", "avg_4P_2025": 4.86, "avg_6P_2025": 4.71, "avg_8P_2025": null, "avg_4P_2125": 4.72, "avg_6P_2125": 4.82, "avg_8P_2125": null, "4P_FR_2025": 4.86, "4P_FR_2024": 4.66, "4P_FR_2023": 4.9, "4P_FR_2022": 4.59, "4P_FR_2021": 4.58, "6P_FR_2025": 4.75, "6P_FR_2024": 5.03, "6P_FR_2023": 4.77, "6P_FR_2022": 4.84, "6P_FR_2021": 5.01, "6P_MA_2025": 4.67, "6P_MA_2024": 4.72, "6P_MA_2023": 4.67, "6P_MA_2022": 4.75, "6P_MA_2021": 4.96, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 87.3, "tr_6P": 89.2, "tr_8P": null, "lat": 46.5217, "lng": 6.6021}, {"name": "Prilly, Romanel-sur-Lausanne et Jouxtens-Mézery", "type": "1-6", "avg_4P_2025": 4.92, "avg_6P_2025": 4.89, "avg_8P_2025": null, "avg_4P_2125": 4.99, "avg_6P_2125": 4.97, "avg_8P_2125": null, "4P_FR_2025": 4.92, "4P_FR_2024": 5.06, "4P_FR_2023": 5.01, "4P_FR_2022": 5.09, "4P_FR_2021": 4.87, "6P_FR_2025": 4.87, "6P_FR_2024": 5.09, "6P_FR_2023": 4.96, "6P_FR_2022": 4.77, "6P_FR_2021": 5.05, "6P_MA_2025": 4.9, "6P_MA_2024": 4.92, "6P_MA_2023": 5.1, "6P_MA_2022": 4.89, "6P_MA_2021": 5.19, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 86.5, "tr_6P": 92.8, "tr_8P": null, "lat": 46.5314, "lng": 6.5953}, {"name": "Rolle - Cœur de la Côte", "type": "1-6", "avg_4P_2025": 5.35, "avg_6P_2025": 5.09, "avg_8P_2025": null, "avg_4P_2125": 5.16, "avg_6P_2125": 5.12, "avg_8P_2125": null, "4P_FR_2025": 5.35, "4P_FR_2024": 5.29, "4P_FR_2023": 5.19, "4P_FR_2022": 4.92, "4P_FR_2021": 5.05, "6P_FR_2025": 5.13, "6P_FR_2024": 5.2, "6P_FR_2023": 5.19, "6P_FR_2022": 4.96, "6P_FR_2021": 5.19, "6P_MA_2025": 5.05, "6P_MA_2024": 4.91, "6P_MA_2023": 5.21, "6P_MA_2022": 5.1, "6P_MA_2021": 5.23, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 100.0, "tr_6P": 97.5, "tr_8P": null, "lat": 46.4588, "lng": 6.3364}, {"name": "Vevey primaire", "type": "1-6", "avg_4P_2025": 5.1, "avg_6P_2025": 4.74, "avg_8P_2025": null, "avg_4P_2125": 4.88, "avg_6P_2125": 4.76, "avg_8P_2125": null, "4P_FR_2025": 5.1, "4P_FR_2024": 4.86, "4P_FR_2023": 4.85, "4P_FR_2022": 4.76, "4P_FR_2021": 4.83, "6P_FR_2025": 4.87, "6P_FR_2024": 4.9, "6P_FR_2023": 4.71, "6P_FR_2022": 4.7, "6P_FR_2021": 4.88, "6P_MA_2025": 4.61, "6P_MA_2024": 4.69, "6P_MA_2023": 4.6, "6P_MA_2022": 4.7, "6P_MA_2021": 4.91, "8P_FR_2025": null, "8P_FR_2024": null, "8P_FR_2023": null, "8P_FR_2022": null, "8P_FR_2021": null, "8P_MA_2025": null, "8P_MA_2024": null, "8P_MA_2023": null, "8P_MA_2022": null, "8P_MA_2021": null, "8P_DE_2025": null, "8P_DE_2024": null, "8P_DE_2023": null, "8P_DE_2022": null, "8P_DE_2021": null, "tr_4P": 92.8, "tr_6P": 90.5, "tr_8P": null, "lat": 46.4631, "lng": 6.8415}, {"name": "Coppet - Terre-Sainte", "type": "1-8", "avg_4P_2025": 5.53, "avg_6P_2025": 5.23, "avg_8P_2025": 4.93, "avg_4P_2125": 5.33, "avg_6P_2125": 5.21, "avg_8P_2125": 4.89, "4P_FR_2025": 5.53, "4P_FR_2024": 5.44, "4P_FR_2023": 5.35, "4P_FR_2022": 5.11, "4P_FR_2021": 5.19, "6P_FR_2025": 5.22, "6P_FR_2024": 5.26, "6P_FR_2023": 5.11, "6P_FR_2022": 4.99, "6P_FR_2021": 5.24, "6P_MA_2025": 5.24, "6P_MA_2024": 5.13, "6P_MA_2023": 5.26, "6P_MA_2022": 5.19, "6P_MA_2021": 5.43, "8P_FR_2025": 4.81, "8P_FR_2024": 4.7, "8P_FR_2023": 4.61, "8P_FR_2022": 4.64, "8P_FR_2021": 4.83, "8P_MA_2025": 4.88, "8P_MA_2024": 4.89, "8P_MA_2023": 4.65, "8P_MA_2022": 4.88, "8P_MA_2021": 4.88, "8P_DE_2025": 5.12, "8P_DE_2024": 4.81, "8P_DE_2023": 5.16, "8P_DE_2022": 5.36, "8P_DE_2021": 5.14, "tr_4P": 99.4, "tr_6P": 100.0, "tr_8P": 93.1, "lat": 46.32, "lng": 6.192}, {"name": "Cossonay Veyron-Venoge", "type": "1-8", "avg_4P_2025": 5.39, "avg_6P_2025": 4.94, "avg_8P_2025": 4.55, "avg_4P_2125": 5.22, "avg_6P_2125": 4.97, "avg_8P_2125": 4.55, "4P_FR_2025": 5.39, "4P_FR_2024": 5.29, "4P_FR_2023": 5.37, "4P_FR_2022": 4.83, "4P_FR_2021": 5.24, "6P_FR_2025": 4.84, "6P_FR_2024": 5.09, "6P_FR_2023": 4.96, "6P_FR_2022": 4.84, "6P_FR_2021": 5.07, "6P_MA_2025": 5.05, "6P_MA_2024": 4.8, "6P_MA_2023": 4.94, "6P_MA_2022": 4.89, "6P_MA_2021": 5.19, "8P_FR_2025": 4.52, "8P_FR_2024": 4.44, "8P_FR_2023": 4.57, "8P_FR_2022": 4.59, "8P_FR_2021": 4.66, "8P_MA_2025": 4.3, "8P_MA_2024": 4.31, "8P_MA_2023": 4.42, "8P_MA_2022": 4.41, "8P_MA_2021": 4.56, "8P_DE_2025": 4.83, "8P_DE_2024": 3.97, "8P_DE_2023": 4.6, "8P_DE_2022": 5.14, "8P_DE_2021": 4.87, "tr_4P": 97.2, "tr_6P": 97.7, "tr_8P": 84.6, "lat": 46.6153, "lng": 6.5012}, {"name": "Echallens-Emile Gardaz", "type": "1-8", "avg_4P_2025": 5.3, "avg_6P_2025": 5.05, "avg_8P_2025": 4.76, "avg_4P_2125": 5.26, "avg_6P_2125": 5.05, "avg_8P_2125": 4.68, "4P_FR_2025": 5.3, "4P_FR_2024": 5.29, "4P_FR_2023": 5.26, "4P_FR_2022": 5.25, "4P_FR_2021": 5.21, "6P_FR_2025": 4.99, "6P_FR_2024": 5.09, "6P_FR_2023": 5.02, "6P_FR_2022": 4.94, "6P_FR_2021": 5.09, "6P_MA_2025": 5.11, "6P_MA_2024": 4.95, "6P_MA_2023": 5.04, "6P_MA_2022": 5.02, "6P_MA_2021": 5.24, "8P_FR_2025": 4.67, "8P_FR_2024": 4.78, "8P_FR_2023": 4.54, "8P_FR_2022": 4.49, "8P_FR_2021": 4.74, "8P_MA_2025": 4.73, "8P_MA_2024": 4.78, "8P_MA_2023": 4.48, "8P_MA_2022": 4.41, "8P_MA_2021": 4.69, "8P_DE_2025": 4.89, "8P_DE_2024": 4.53, "8P_DE_2023": 4.75, "8P_DE_2022": 4.95, "8P_DE_2021": 4.72, "tr_4P": 95.1, "tr_6P": 98.1, "tr_8P": 90.2, "lat": 46.6408, "lng": 6.634}, {"name": "Gimel - Etoy", "type": "1-8", "avg_4P_2025": 5.3, "avg_6P_2025": 4.88, "avg_8P_2025": 4.85, "avg_4P_2125": 5.14, "avg_6P_2125": 4.91, "avg_8P_2125": 4.74, "4P_FR_2025": 5.3, "4P_FR_2024": 5.26, "4P_FR_2023": 4.98, "4P_FR_2022": 5.06, "4P_FR_2021": 5.09, "6P_FR_2025": 4.89, "6P_FR_2024": 5.15, "6P_FR_2023": 4.75, "6P_FR_2022": 4.66, "6P_FR_2021": 5.11, "6P_MA_2025": 4.86, "6P_MA_2024": 4.84, "6P_MA_2023": 4.9, "6P_MA_2022": 4.72, "6P_MA_2021": 5.25, "8P_FR_2025": 4.77, "8P_FR_2024": 4.83, "8P_FR_2023": 4.83, "8P_FR_2022": 4.64, "8P_FR_2021": 4.68, "8P_MA_2025": 4.71, "8P_MA_2024": 4.57, "8P_MA_2023": 4.51, "8P_MA_2022": 4.38, "8P_MA_2021": 4.59, "8P_DE_2025": 5.08, "8P_DE_2024": 4.46, "8P_DE_2023": 5.0, "8P_DE_2022": 5.07, "8P_DE_2021": 4.94, "tr_4P": 93.6, "tr_6P": 95.7, "tr_8P": 92.2, "lat": 46.4869, "lng": 6.31}, {"name": "Gland", "type": "1-8", "avg_4P_2025": 5.28, "avg_6P_2025": 4.87, "avg_8P_2025": 4.6, "avg_4P_2125": 5.11, "avg_6P_2125": 4.95, "avg_8P_2125": 4.54, "4P_FR_2025": 5.28, "4P_FR_2024": 5.21, "4P_FR_2023": 5.09, "4P_FR_2022": 4.84, "4P_FR_2021": 5.12, "6P_FR_2025": 4.88, "6P_FR_2024": 4.97, "6P_FR_2023": 5.0, "6P_FR_2022": 4.72, "6P_FR_2021": 5.12, "6P_MA_2025": 4.85, "6P_MA_2024": 4.61, "6P_MA_2023": 5.08, "6P_MA_2022": 4.97, "6P_MA_2021": 5.27, "8P_FR_2025": 4.67, "8P_FR_2024": 4.59, "8P_FR_2023": 4.47, "8P_FR_2022": 4.47, "8P_FR_2021": 4.64, "8P_MA_2025": 4.22, "8P_MA_2024": 4.35, "8P_MA_2023": 4.24, "8P_MA_2022": 4.05, "8P_MA_2021": 4.41, "8P_DE_2025": 4.91, "8P_DE_2024": 4.31, "8P_DE_2023": 4.97, "8P_DE_2022": 4.99, "8P_DE_2021": 4.77, "tr_4P": 95.4, "tr_6P": 92.5, "tr_8P": 84.1, "lat": 46.4189, "lng": 6.2639}, {"name": "Morges-Est", "type": "1-8", "avg_4P_2025": 5.3, "avg_6P_2025": 5.09, "avg_8P_2025": 4.63, "avg_4P_2125": 5.07, "avg_6P_2125": 5.08, "avg_8P_2125": 4.56, "4P_FR_2025": 5.3, "4P_FR_2024": 5.03, "4P_FR_2023": 5.12, "4P_FR_2022": 4.87, "4P_FR_2021": 5.04, "6P_FR_2025": 5.07, "6P_FR_2024": 5.12, "6P_FR_2023": 5.05, "6P_FR_2022": 4.89, "6P_FR_2021": 5.12, "6P_MA_2025": 5.11, "6P_MA_2024": 4.92, "6P_MA_2023": 5.18, "6P_MA_2022": 5.02, "6P_MA_2021": 5.28, "8P_FR_2025": 4.64, "8P_FR_2024": 4.43, "8P_FR_2023": 4.45, "8P_FR_2022": 4.32, "8P_FR_2021": 4.64, "8P_MA_2025": 4.53, "8P_MA_2024": 4.32, "8P_MA_2023": 4.34, "8P_MA_2022": 4.58, "8P_MA_2021": 4.59, "8P_DE_2025": 4.72, "8P_DE_2024": 4.28, "8P_DE_2023": 4.75, "8P_DE_2022": 5.09, "8P_DE_2021": 4.77, "tr_4P": 95.7, "tr_6P": 97.6, "tr_8P": 83.6, "lat": 46.5098, "lng": 6.5113}, {"name": "Morges-Ouest", "type": "1-8", "avg_4P_2025": 5.12, "avg_6P_2025": 4.94, "avg_8P_2025": 4.68, "avg_4P_2125": 5.15, "avg_6P_2125": 5.04, "avg_8P_2125": 4.79, "4P_FR_2025": 5.12, "4P_FR_2024": 5.41, "4P_FR_2023": 4.96, "4P_FR_2022": 5.25, "4P_FR_2021": 5.0, "6P_FR_2025": 5.02, "6P_FR_2024": 5.21, "6P_FR_2023": 4.89, "6P_FR_2022": 4.99, "6P_FR_2021": 5.17, "6P_MA_2025": 4.86, "6P_MA_2024": 5.04, "6P_MA_2023": 4.86, "6P_MA_2022": 5.13, "6P_MA_2021": 5.27, "8P_FR_2025": 4.72, "8P_FR_2024": 4.74, "8P_FR_2023": 4.76, "8P_FR_2022": 4.7, "8P_FR_2021": 4.92, "8P_MA_2025": 4.53, "8P_MA_2024": 4.5, "8P_MA_2023": 4.72, "8P_MA_2022": 4.67, "8P_MA_2021": 4.86, "8P_DE_2025": 4.79, "8P_DE_2024": 4.64, "8P_DE_2023": 4.97, "8P_DE_2022": 5.21, "8P_DE_2021": 5.04, "tr_4P": 92.7, "tr_6P": 96.0, "tr_8P": 84.4, "lat": 46.5077, "lng": 6.4936}, {"name": "Moudon - Lucens", "type": "1-8", "avg_4P_2025": 4.64, "avg_6P_2025": 4.7, "avg_8P_2025": 4.35, "avg_4P_2125": 4.57, "avg_6P_2125": 4.71, "avg_8P_2125": 4.39, "4P_FR_2025": 4.64, "4P_FR_2024": 4.68, "4P_FR_2023": 4.56, "4P_FR_2022": 4.41, "4P_FR_2021": 4.55, "6P_FR_2025": 4.75, "6P_FR_2024": 4.79, "6P_FR_2023": 4.63, "6P_FR_2022": 4.66, "6P_FR_2021": 4.81, "6P_MA_2025": 4.64, "6P_MA_2024": 4.49, "6P_MA_2023": 4.72, "6P_MA_2022": 4.82, "6P_MA_2021": 4.79, "8P_FR_2025": 4.4, "8P_FR_2024": 4.39, "8P_FR_2023": 4.5, "8P_FR_2022": 4.44, "8P_FR_2021": 4.47, "8P_MA_2025": 4.31, "8P_MA_2024": 4.15, "8P_MA_2023": 4.16, "8P_MA_2022": 4.27, "8P_MA_2021": 4.28, "8P_DE_2025": 4.35, "8P_DE_2024": 4.16, "8P_DE_2023": 4.55, "8P_DE_2022": 4.8, "8P_DE_2021": 4.57, "tr_4P": 83.3, "tr_6P": 92.0, "tr_8P": 78.8, "lat": 46.6681, "lng": 6.7982}, {"name": "Nyon Jura et Prangins", "type": "1-8", "avg_4P_2025": 5.2, "avg_6P_2025": 5.07, "avg_8P_2025": 4.91, "avg_4P_2125": 5.23, "avg_6P_2125": 5.02, "avg_8P_2125": 4.7, "4P_FR_2025": 5.2, "4P_FR_2024": 5.37, "4P_FR_2023": 5.3, "4P_FR_2022": 5.01, "4P_FR_2021": 5.28, "6P_FR_2025": 5.03, "6P_FR_2024": 5.21, "6P_FR_2023": 4.93, "6P_FR_2022": 4.73, "6P_FR_2021": 5.12, "6P_MA_2025": 5.11, "6P_MA_2024": 5.1, "6P_MA_2023": 4.94, "6P_MA_2022": 4.76, "6P_MA_2021": 5.25, "8P_FR_2025": 4.79, "8P_FR_2024": 4.62, "8P_FR_2023": 4.53, "8P_FR_2022": 4.52, "8P_FR_2021": 4.7, "8P_MA_2025": 4.88, "8P_MA_2024": 4.55, "8P_MA_2023": 4.3, "8P_MA_2022": 4.41, "8P_MA_2021": 4.73, "8P_DE_2025": 5.08, "8P_DE_2024": 4.58, "8P_DE_2023": 4.86, "8P_DE_2022": 5.09, "8P_DE_2021": 4.81, "tr_4P": 93.9, "tr_6P": 95.8, "tr_8P": 91.4, "lat": 46.383, "lng": 6.237}, {"name": "Nyon Léman", "type": "1-8", "avg_4P_2025": 5.17, "avg_6P_2025": 4.97, "avg_8P_2025": 4.55, "avg_4P_2125": 4.95, "avg_6P_2125": 4.99, "avg_8P_2125": 4.74, "4P_FR_2025": 5.17, "4P_FR_2024": 4.95, "4P_FR_2023": 4.93, "4P_FR_2022": 4.89, "4P_FR_2021": 4.79, "6P_FR_2025": 5.04, "6P_FR_2024": 5.14, "6P_FR_2023": 4.9, "6P_FR_2022": 4.79, "6P_FR_2021": 5.14, "6P_MA_2025": 4.91, "6P_MA_2024": 5.0, "6P_MA_2023": 4.91, "6P_MA_2022": 4.88, "6P_MA_2021": 5.23, "8P_FR_2025": 4.47, "8P_FR_2024": 4.67, "8P_FR_2023": 4.54, "8P_FR_2022": 4.73, "8P_FR_2021": 4.74, "8P_MA_2025": 4.38, "8P_MA_2024": 4.68, "8P_MA_2023": 4.51, "8P_MA_2022": 4.84, "8P_MA_2021": 4.73, "8P_DE_2025": 4.8, "8P_DE_2024": 4.75, "8P_DE_2023": 4.88, "8P_DE_2022": 5.22, "8P_DE_2021": 5.11, "tr_4P": 93.4, "tr_6P": 93.1, "tr_8P": 80.3, "lat": 46.3794, "lng": 6.2449}, {"name": "Orbe et environs", "type": "1-8", "avg_4P_2025": 5.26, "avg_6P_2025": 4.86, "avg_8P_2025": 4.42, "avg_4P_2125": 5.11, "avg_6P_2125": 4.95, "avg_8P_2125": 4.48, "4P_FR_2025": 5.26, "4P_FR_2024": 5.06, "4P_FR_2023": 5.19, "4P_FR_2022": 5.02, "4P_FR_2021": 5.01, "6P_FR_2025": 4.86, "6P_FR_2024": 5.0, "6P_FR_2023": 4.93, "6P_FR_2022": 4.97, "6P_FR_2021": 5.02, "6P_MA_2025": 4.87, "6P_MA_2024": 4.84, "6P_MA_2023": 4.87, "6P_MA_2022": 4.99, "6P_MA_2021": 5.13, "8P_FR_2025": 4.33, "8P_FR_2024": 4.65, "8P_FR_2023": 4.35, "8P_FR_2022": 4.36, "8P_FR_2021": 4.56, "8P_MA_2025": 4.2, "8P_MA_2024": 4.42, "8P_MA_2023": 4.07, "8P_MA_2022": 4.33, "8P_MA_2021": 4.48, "8P_DE_2025": 4.72, "8P_DE_2024": 4.36, "8P_DE_2023": 4.68, "8P_DE_2022": 5.07, "8P_DE_2021": 4.69, "tr_4P": 95.8, "tr_6P": 96.1, "tr_8P": 79.2, "lat": 46.7228, "lng": 6.534}, {"name": "Payerne-Corcelles et environs", "type": "1-8", "avg_4P_2025": 4.76, "avg_6P_2025": 4.39, "avg_8P_2025": 4.41, "avg_4P_2125": 4.69, "avg_6P_2125": 4.58, "avg_8P_2125": 4.26, "4P_FR_2025": 4.76, "4P_FR_2024": 4.62, "4P_FR_2023": 4.78, "4P_FR_2022": 4.63, "4P_FR_2021": null, "6P_FR_2025": 4.45, "6P_FR_2024": 4.84, "6P_FR_2023": 4.64, "6P_FR_2022": 4.58, "6P_FR_2021": null, "6P_MA_2025": 4.32, "6P_MA_2024": 4.38, "6P_MA_2023": 4.68, "6P_MA_2022": 4.72, "6P_MA_2021": null, "8P_FR_2025": 4.36, "8P_FR_2024": 4.3, "8P_FR_2023": 4.21, "8P_FR_2022": 4.42, "8P_FR_2021": null, "8P_MA_2025": 4.18, "8P_MA_2024": 4.03, "8P_MA_2023": 3.97, "8P_MA_2022": 4.05, "8P_MA_2021": null, "8P_DE_2025": 4.68, "8P_DE_2024": 3.96, "8P_DE_2023": 4.36, "8P_DE_2022": 4.6, "8P_DE_2021": null, "tr_4P": 84.0, "tr_6P": 74.8, "tr_8P": 77.5, "lat": 46.8207, "lng": 6.9388}, {"name": "Payerne-Granges et environs", "type": "1-8", "avg_4P_2025": 4.46, "avg_6P_2025": 4.46, "avg_8P_2025": 4.34, "avg_4P_2125": 4.41, "avg_6P_2125": 4.56, "avg_8P_2125": 4.26, "4P_FR_2025": 4.46, "4P_FR_2024": 4.45, "4P_FR_2023": 4.61, "4P_FR_2022": 4.11, "4P_FR_2021": null, "6P_FR_2025": 4.56, "6P_FR_2024": 4.56, "6P_FR_2023": 4.7, "6P_FR_2022": 4.54, "6P_FR_2021": null, "6P_MA_2025": 4.36, "6P_MA_2024": 4.4, "6P_MA_2023": 4.74, "6P_MA_2022": 4.65, "6P_MA_2021": null, "8P_FR_2025": 4.24, "8P_FR_2024": 4.32, "8P_FR_2023": 4.16, "8P_FR_2022": 4.29, "8P_FR_2021": null, "8P_MA_2025": 4.46, "8P_MA_2024": 4.22, "8P_MA_2023": 4.1, "8P_MA_2022": 3.89, "8P_MA_2021": null, "8P_DE_2025": 4.32, "8P_DE_2024": 4.06, "8P_DE_2023": 4.31, "8P_DE_2022": 4.71, "8P_DE_2021": null, "tr_4P": 70.4, "tr_6P": 79.5, "tr_8P": 75.4, "lat": 46.8291, "lng": 6.942}, {"name": "Penthalaz - Venoge", "type": "1-8", "avg_4P_2025": 4.95, "avg_6P_2025": 4.89, "avg_8P_2025": 4.51, "avg_4P_2125": 4.92, "avg_6P_2125": 4.94, "avg_8P_2125": 4.52, "4P_FR_2025": 4.95, "4P_FR_2024": 4.96, "4P_FR_2023": 4.99, "4P_FR_2022": 4.62, "4P_FR_2021": 5.11, "6P_FR_2025": 4.96, "6P_FR_2024": 4.98, "6P_FR_2023": 4.88, "6P_FR_2022": 4.81, "6P_FR_2021": 4.98, "6P_MA_2025": 4.83, "6P_MA_2024": 4.91, "6P_MA_2023": 4.94, "6P_MA_2022": 5.01, "6P_MA_2021": 5.08, "8P_FR_2025": 4.8, "8P_FR_2024": 4.67, "8P_FR_2023": 4.67, "8P_FR_2022": 4.56, "8P_FR_2021": 4.74, "8P_MA_2025": 4.23, "8P_MA_2024": 4.31, "8P_MA_2023": 4.01, "8P_MA_2022": 4.22, "8P_MA_2021": 4.55, "8P_DE_2025": 4.49, "8P_DE_2024": 4.3, "8P_DE_2023": 4.7, "8P_DE_2022": 4.91, "8P_DE_2021": 4.66, "tr_4P": 92.9, "tr_6P": 98.9, "tr_8P": 80.7, "lat": 46.6152, "lng": 6.5377}, {"name": "Pully - Paudex - Belmont", "type": "1-8", "avg_4P_2025": 5.38, "avg_6P_2025": 5.16, "avg_8P_2025": 5.01, "avg_4P_2125": 5.29, "avg_6P_2125": 5.19, "avg_8P_2125": 4.92, "4P_FR_2025": 5.38, "4P_FR_2024": 5.58, "4P_FR_2023": 5.32, "4P_FR_2022": 5.04, "4P_FR_2021": 5.14, "6P_FR_2025": 5.18, "6P_FR_2024": 5.3, "6P_FR_2023": 5.09, "6P_FR_2022": 5.14, "6P_FR_2021": 5.25, "6P_MA_2025": 5.14, "6P_MA_2024": 5.15, "6P_MA_2023": 5.08, "6P_MA_2022": 5.21, "6P_MA_2021": 5.31, "8P_FR_2025": 4.89, "8P_FR_2024": 4.8, "8P_FR_2023": 4.79, "8P_FR_2022": 4.69, "8P_FR_2021": 4.85, "8P_MA_2025": 4.88, "8P_MA_2024": 4.99, "8P_MA_2023": 4.89, "8P_MA_2022": 4.7, "8P_MA_2021": 4.93, "8P_DE_2025": 5.28, "8P_DE_2024": 4.8, "8P_DE_2023": 5.15, "8P_DE_2022": 5.27, "8P_DE_2021": 4.96, "tr_4P": 97.1, "tr_6P": 98.7, "tr_8P": 95.5, "lat": 46.5082, "lng": 6.6631}, {"name": "Renens-Est", "type": "1-8", "avg_4P_2025": 4.64, "avg_6P_2025": 4.58, "avg_8P_2025": 4.25, "avg_4P_2125": 4.56, "avg_6P_2125": 4.62, "avg_8P_2125": 4.18, "4P_FR_2025": 4.64, "4P_FR_2024": 4.65, "4P_FR_2023": 4.75, "4P_FR_2022": 4.34, "4P_FR_2021": 4.42, "6P_FR_2025": 4.55, "6P_FR_2024": 4.69, "6P_FR_2023": 4.55, "6P_FR_2022": 4.69, "6P_FR_2021": 4.76, "6P_MA_2025": 4.61, "6P_MA_2024": 4.32, "6P_MA_2023": 4.58, "6P_MA_2022": 4.65, "6P_MA_2021": 4.81, "8P_FR_2025": 4.24, "8P_FR_2024": 4.21, "8P_FR_2023": 4.18, "8P_FR_2022": 4.05, "8P_FR_2021": 4.48, "8P_MA_2025": 4.14, "8P_MA_2024": 3.85, "8P_MA_2023": 3.69, "8P_MA_2022": 3.97, "8P_MA_2021": 4.38, "8P_DE_2025": 4.37, "8P_DE_2024": 3.61, "8P_DE_2023": 4.35, "8P_DE_2022": 4.55, "8P_DE_2021": 4.57, "tr_4P": 84.6, "tr_6P": 85.7, "tr_8P": 73.4, "lat": 46.5374, "lng": 6.5802}, {"name": "Renens-Ouest", "type": "1-8", "avg_4P_2025": 4.52, "avg_6P_2025": 4.65, "avg_8P_2025": 4.46, "avg_4P_2125": 4.51, "avg_6P_2125": 4.68, "avg_8P_2125": 4.47, "4P_FR_2025": 4.52, "4P_FR_2024": 4.36, "4P_FR_2023": 4.52, "4P_FR_2022": 4.31, "4P_FR_2021": 4.81, "6P_FR_2025": 4.71, "6P_FR_2024": 4.69, "6P_FR_2023": 4.72, "6P_FR_2022": 4.77, "6P_FR_2021": 4.79, "6P_MA_2025": 4.58, "6P_MA_2024": 4.22, "6P_MA_2023": 4.61, "6P_MA_2022": 4.83, "6P_MA_2021": 4.91, "8P_FR_2025": 4.34, "8P_FR_2024": 4.44, "8P_FR_2023": 4.47, "8P_FR_2022": 4.55, "8P_FR_2021": 4.65, "8P_MA_2025": 4.31, "8P_MA_2024": 4.35, "8P_MA_2023": 4.13, "8P_MA_2022": 4.36, "8P_MA_2021": 4.54, "8P_DE_2025": 4.74, "8P_DE_2024": 4.21, "8P_DE_2023": 4.51, "8P_DE_2022": 4.76, "8P_DE_2021": 4.65, "tr_4P": 81.0, "tr_6P": 91.0, "tr_8P": 81.6, "lat": 46.5342, "lng": 6.5722}, {"name": "Villars-le-Terroir - Poliez-Pittet", "type": "1-8", "avg_4P_2025": 5.49, "avg_6P_2025": 5.09, "avg_8P_2025": 4.69, "avg_4P_2125": 5.28, "avg_6P_2125": 5.01, "avg_8P_2125": 4.61, "4P_FR_2025": 5.49, "4P_FR_2024": 5.33, "4P_FR_2023": 5.41, "4P_FR_2022": 4.94, "4P_FR_2021": 5.24, "6P_FR_2025": 5.11, "6P_FR_2024": 5.14, "6P_FR_2023": 4.95, "6P_FR_2022": 4.8, "6P_FR_2021": 5.2, "6P_MA_2025": 5.06, "6P_MA_2024": 4.93, "6P_MA_2023": 5.0, "6P_MA_2022": 4.92, "6P_MA_2021": 5.0, "8P_FR_2025": 4.65, "8P_FR_2024": 4.67, "8P_FR_2023": 4.65, "8P_FR_2022": 4.6, "8P_FR_2021": 4.66, "8P_MA_2025": 4.6, "8P_MA_2024": 4.53, "8P_MA_2023": 4.23, "8P_MA_2022": 4.63, "8P_MA_2021": 4.42, "8P_DE_2025": 4.82, "8P_DE_2024": 4.36, "8P_DE_2023": 4.66, "8P_DE_2022": 4.99, "8P_DE_2021": 4.69, "tr_4P": 98.1, "tr_6P": 98.1, "tr_8P": 90.4, "lat": 46.651, "lng": 6.693}, {"name": "Yverdon-les-Bains - Edmond-Gilliard", "type": "1-8", "avg_4P_2025": 4.95, "avg_6P_2025": 4.82, "avg_8P_2025": 4.41, "avg_4P_2125": 4.93, "avg_6P_2125": 4.89, "avg_8P_2125": 4.48, "4P_FR_2025": 4.95, "4P_FR_2024": 4.94, "4P_FR_2023": 4.95, "4P_FR_2022": 4.86, "4P_FR_2021": 4.94, "6P_FR_2025": 4.76, "6P_FR_2024": 4.96, "6P_FR_2023": 4.84, "6P_FR_2022": 4.73, "6P_FR_2021": 5.17, "6P_MA_2025": 4.88, "6P_MA_2024": 4.67, "6P_MA_2023": 4.96, "6P_MA_2022": 4.76, "6P_MA_2021": 5.23, "8P_FR_2025": 4.41, "8P_FR_2024": 4.45, "8P_FR_2023": 4.4, "8P_FR_2022": 4.31, "8P_FR_2021": 4.74, "8P_MA_2025": 4.21, "8P_MA_2024": 4.34, "8P_MA_2023": 4.21, "8P_MA_2022": 4.24, "8P_MA_2021": 4.63, "8P_DE_2025": 4.59, "8P_DE_2024": 4.16, "8P_DE_2023": 4.79, "8P_DE_2022": 4.92, "8P_DE_2021": 4.79, "tr_4P": 89.7, "tr_6P": 94.4, "tr_8P": 77.3, "lat": 46.7797, "lng": 6.6413}, {"name": "Yverdon-les-Bains - Pestalozzi", "type": "1-8", "avg_4P_2025": 4.86, "avg_6P_2025": 4.8, "avg_8P_2025": 4.34, "avg_4P_2125": 4.78, "avg_6P_2125": 4.81, "avg_8P_2125": 4.36, "4P_FR_2025": 4.86, "4P_FR_2024": 4.64, "4P_FR_2023": 4.86, "4P_FR_2022": 4.78, "4P_FR_2021": 4.77, "6P_FR_2025": 4.81, "6P_FR_2024": 5.03, "6P_FR_2023": 4.78, "6P_FR_2022": 4.66, "6P_FR_2021": 4.97, "6P_MA_2025": 4.78, "6P_MA_2024": 4.68, "6P_MA_2023": 4.75, "6P_MA_2022": 4.76, "6P_MA_2021": 4.86, "8P_FR_2025": 4.39, "8P_FR_2024": 4.41, "8P_FR_2023": 4.39, "8P_FR_2022": 4.36, "8P_FR_2021": 4.42, "8P_MA_2025": 4.23, "8P_MA_2024": 4.12, "8P_MA_2023": 4.02, "8P_MA_2022": 4.18, "8P_MA_2021": 4.4, "8P_DE_2025": 4.41, "8P_DE_2024": 4.15, "8P_DE_2023": 4.5, "8P_DE_2022": 4.86, "8P_DE_2021": 4.56, "tr_4P": 86.1, "tr_6P": 91.7, "tr_8P": 75.1, "lat": 46.7789, "lng": 6.6374}, {"name": "Aigle", "type": "1-11", "avg_4P_2025": 5.02, "avg_6P_2025": 4.46, "avg_8P_2025": 4.19, "avg_4P_2125": 4.86, "avg_6P_2125": 4.57, "avg_8P_2125": 4.13, "4P_FR_2025": 5.02, "4P_FR_2024": 5.04, "4P_FR_2023": 4.61, "4P_FR_2022": 4.75, "4P_FR_2021": 4.91, "6P_FR_2025": 4.44, "6P_FR_2024": 4.82, "6P_FR_2023": 4.59, "6P_FR_2022": 4.65, "6P_FR_2021": 4.52, "6P_MA_2025": 4.47, "6P_MA_2024": 4.51, "6P_MA_2023": 4.7, "6P_MA_2022": 4.54, "6P_MA_2021": 4.51, "8P_FR_2025": 4.13, "8P_FR_2024": 4.14, "8P_FR_2023": 4.11, "8P_FR_2022": 4.17, "8P_FR_2021": 4.36, "8P_MA_2025": 4.03, "8P_MA_2024": 3.71, "8P_MA_2023": 3.69, "8P_MA_2022": 3.95, "8P_MA_2021": 4.13, "8P_DE_2025": 4.4, "8P_DE_2024": 3.89, "8P_DE_2023": 4.25, "8P_DE_2022": 4.67, "8P_DE_2021": 4.38, "tr_4P": 89.4, "tr_6P": 78.1, "tr_8P": 67.2, "lat": 46.318, "lng": 6.97}, {"name": "Apples - Bière et environs", "type": "1-11", "avg_4P_2025": 5.44, "avg_6P_2025": 5.08, "avg_8P_2025": 4.7, "avg_4P_2125": 5.3, "avg_6P_2125": 4.99, "avg_8P_2125": 4.51, "4P_FR_2025": 5.44, "4P_FR_2024": 5.28, "4P_FR_2023": 5.22, "4P_FR_2022": 5.23, "4P_FR_2021": 5.3, "6P_FR_2025": 5.12, "6P_FR_2024": 5.08, "6P_FR_2023": 4.96, "6P_FR_2022": 4.87, "6P_FR_2021": 5.09, "6P_MA_2025": 5.03, "6P_MA_2024": 4.89, "6P_MA_2023": 5.09, "6P_MA_2022": 4.84, "6P_MA_2021": 4.98, "8P_FR_2025": 4.77, "8P_FR_2024": 4.54, "8P_FR_2023": 4.41, "8P_FR_2022": 4.47, "8P_FR_2021": 4.64, "8P_MA_2025": 4.72, "8P_MA_2024": 4.41, "8P_MA_2023": 4.24, "8P_MA_2022": 4.51, "8P_MA_2021": 4.37, "8P_DE_2025": 4.62, "8P_DE_2024": 4.2, "8P_DE_2023": 4.59, "8P_DE_2022": 4.81, "8P_DE_2021": 4.31, "tr_4P": 96.5, "tr_6P": 95.7, "tr_8P": 91.6, "lat": 46.5521, "lng": 6.3479}, {"name": "Aubonne et environs", "type": "1-11", "avg_4P_2025": 5.13, "avg_6P_2025": 5.16, "avg_8P_2025": 4.76, "avg_4P_2125": 5.32, "avg_6P_2125": 4.97, "avg_8P_2125": 4.68, "4P_FR_2025": 5.13, "4P_FR_2024": 5.34, "4P_FR_2023": 5.35, "4P_FR_2022": 5.55, "4P_FR_2021": 5.22, "6P_FR_2025": 5.09, "6P_FR_2024": 4.89, "6P_FR_2023": 5.01, "6P_FR_2022": 4.52, "6P_FR_2021": 5.14, "6P_MA_2025": 5.22, "6P_MA_2024": 4.93, "6P_MA_2023": 5.0, "6P_MA_2022": 4.69, "6P_MA_2021": 5.21, "8P_FR_2025": 4.77, "8P_FR_2024": 4.67, "8P_FR_2023": 4.73, "8P_FR_2022": 4.46, "8P_FR_2021": 4.72, "8P_MA_2025": 4.5, "8P_MA_2024": 4.47, "8P_MA_2023": 4.54, "8P_MA_2022": 4.51, "8P_MA_2021": 4.62, "8P_DE_2025": 5.01, "8P_DE_2024": 4.22, "8P_DE_2023": 4.96, "8P_DE_2022": 5.08, "8P_DE_2021": 4.92, "tr_4P": 91.1, "tr_6P": 100.0, "tr_8P": 89.6, "lat": 46.495, "lng": 6.3913}, {"name": "Avenches et environs", "type": "1-11", "avg_4P_2025": 4.98, "avg_6P_2025": 4.81, "avg_8P_2025": 4.65, "avg_4P_2125": 4.98, "avg_6P_2125": 4.92, "avg_8P_2125": 4.55, "4P_FR_2025": 4.98, "4P_FR_2024": 4.93, "4P_FR_2023": 5.24, "4P_FR_2022": 4.98, "4P_FR_2021": 4.77, "6P_FR_2025": 4.85, "6P_FR_2024": 5.11, "6P_FR_2023": 4.89, "6P_FR_2022": 4.69, "6P_FR_2021": 5.05, "6P_MA_2025": 4.77, "6P_MA_2024": 4.89, "6P_MA_2023": 4.83, "6P_MA_2022": 4.91, "6P_MA_2021": 5.21, "8P_FR_2025": 4.57, "8P_FR_2024": 4.64, "8P_FR_2023": 4.44, "8P_FR_2022": 4.32, "8P_FR_2021": 4.5, "8P_MA_2025": 4.6, "8P_MA_2024": 4.74, "8P_MA_2023": 4.35, "8P_MA_2022": 4.39, "8P_MA_2021": 4.45, "8P_DE_2025": 4.78, "8P_DE_2024": 4.5, "8P_DE_2023": 4.61, "8P_DE_2022": 4.81, "8P_DE_2021": 4.49, "tr_4P": 87.9, "tr_6P": 95.6, "tr_8P": 86.8, "lat": 46.876, "lng": 7.04}, {"name": "Begnins - L'Esplanade", "type": "1-11", "avg_4P_2025": 5.21, "avg_6P_2025": 5.07, "avg_8P_2025": 4.83, "avg_4P_2125": 5.23, "avg_6P_2125": 5.09, "avg_8P_2125": 4.63, "4P_FR_2025": 5.21, "4P_FR_2024": 5.49, "4P_FR_2023": 5.07, "4P_FR_2022": 5.09, "4P_FR_2021": 5.27, "6P_FR_2025": 5.08, "6P_FR_2024": 5.17, "6P_FR_2023": 5.14, "6P_FR_2022": 4.83, "6P_FR_2021": 5.24, "6P_MA_2025": 5.07, "6P_MA_2024": 4.84, "6P_MA_2023": 5.15, "6P_MA_2022": 4.97, "6P_MA_2021": 5.36, "8P_FR_2025": 4.71, "8P_FR_2024": 4.46, "8P_FR_2023": 4.6, "8P_FR_2022": 4.41, "8P_FR_2021": 4.5, "8P_MA_2025": 4.62, "8P_MA_2024": 4.52, "8P_MA_2023": 4.31, "8P_MA_2022": 4.5, "8P_MA_2021": 4.5, "8P_DE_2025": 5.15, "8P_DE_2024": 4.3, "8P_DE_2023": 4.93, "8P_DE_2022": 5.21, "8P_DE_2021": 4.67, "tr_4P": 92.9, "tr_6P": 97.2, "tr_8P": 91.9, "lat": 46.4163, "lng": 6.2102}, {"name": "Bercher - Plateau du Jorat", "type": "1-11", "avg_4P_2025": 5.19, "avg_6P_2025": 4.95, "avg_8P_2025": 4.48, "avg_4P_2125": 5.05, "avg_6P_2125": 4.92, "avg_8P_2125": 4.46, "4P_FR_2025": 5.19, "4P_FR_2024": 4.98, "4P_FR_2023": 5.16, "4P_FR_2022": 4.97, "4P_FR_2021": 4.96, "6P_FR_2025": 5.04, "6P_FR_2024": 5.13, "6P_FR_2023": 4.87, "6P_FR_2022": 4.69, "6P_FR_2021": 5.05, "6P_MA_2025": 4.85, "6P_MA_2024": 4.82, "6P_MA_2023": 4.84, "6P_MA_2022": 4.93, "6P_MA_2021": 4.93, "8P_FR_2025": 4.51, "8P_FR_2024": 4.58, "8P_FR_2023": 4.35, "8P_FR_2022": 4.56, "8P_FR_2021": 4.69, "8P_MA_2025": 4.4, "8P_MA_2024": 4.41, "8P_MA_2023": 4.16, "8P_MA_2022": 4.32, "8P_MA_2021": 4.45, "8P_DE_2025": 4.52, "8P_DE_2024": 4.18, "8P_DE_2023": 4.35, "8P_DE_2022": 4.75, "8P_DE_2021": 4.63, "tr_4P": 93.8, "tr_6P": 98.1, "tr_8P": 81.8, "lat": 46.6988, "lng": 6.6971}, {"name": "Bex", "type": "1-11", "avg_4P_2025": 4.68, "avg_6P_2025": 4.94, "avg_8P_2025": 4.34, "avg_4P_2125": 4.92, "avg_6P_2125": 4.89, "avg_8P_2125": 4.41, "4P_FR_2025": 4.68, "4P_FR_2024": 4.85, "4P_FR_2023": 4.92, "4P_FR_2022": 5.04, "4P_FR_2021": 5.09, "6P_FR_2025": 4.96, "6P_FR_2024": 5.09, "6P_FR_2023": 4.87, "6P_FR_2022": 4.83, "6P_FR_2021": 4.91, "6P_MA_2025": 4.93, "6P_MA_2024": 5.03, "6P_MA_2023": 4.79, "6P_MA_2022": 4.78, "6P_MA_2021": 4.69, "8P_FR_2025": 4.24, "8P_FR_2024": 4.61, "8P_FR_2023": 4.24, "8P_FR_2022": 4.31, "8P_FR_2021": 4.61, "8P_MA_2025": 4.16, "8P_MA_2024": 4.54, "8P_MA_2023": 3.77, "8P_MA_2022": 4.25, "8P_MA_2021": 4.41, "8P_DE_2025": 4.62, "8P_DE_2024": 4.35, "8P_DE_2023": 4.45, "8P_DE_2022": 4.79, "8P_DE_2021": 4.81, "tr_4P": 88.1, "tr_6P": 95.9, "tr_8P": 75.3, "lat": 46.2531, "lng": 6.9972}, {"name": "Blonay - Saint-Légier", "type": "1-11", "avg_4P_2025": 5.21, "avg_6P_2025": 5.06, "avg_8P_2025": 4.98, "avg_4P_2125": 5.23, "avg_6P_2125": 5.05, "avg_8P_2125": 4.99, "4P_FR_2025": 5.21, "4P_FR_2024": 5.27, "4P_FR_2023": 5.37, "4P_FR_2022": 5.13, "4P_FR_2021": 5.16, "6P_FR_2025": 5.12, "6P_FR_2024": 5.04, "6P_FR_2023": 5.03, "6P_FR_2022": 4.91, "6P_FR_2021": 5.1, "6P_MA_2025": 5.0, "6P_MA_2024": 4.81, "6P_MA_2023": 5.16, "6P_MA_2022": 5.18, "6P_MA_2021": 5.17, "8P_FR_2025": 4.7, "8P_FR_2024": 4.82, "8P_FR_2023": 4.77, "8P_FR_2022": 4.7, "8P_FR_2021": 4.87, "8P_MA_2025": 4.94, "8P_MA_2024": 4.95, "8P_MA_2023": 4.93, "8P_MA_2022": 4.91, "8P_MA_2021": 5.09, "8P_DE_2025": 5.29, "8P_DE_2024": 4.96, "8P_DE_2023": 5.21, "8P_DE_2022": 5.38, "8P_DE_2021": 5.29, "tr_4P": 94.3, "tr_6P": 99.1, "tr_8P": 94.3, "lat": 46.4658, "lng": 6.8609}, {"name": "Bussigny et Villars-Ste-Croix", "type": "1-11", "avg_4P_2025": 5.18, "avg_6P_2025": 4.79, "avg_8P_2025": 4.44, "avg_4P_2125": 5.02, "avg_6P_2125": 4.83, "avg_8P_2125": 4.41, "4P_FR_2025": 5.18, "4P_FR_2024": 5.09, "4P_FR_2023": 5.03, "4P_FR_2022": 4.98, "4P_FR_2021": 4.81, "6P_FR_2025": 4.83, "6P_FR_2024": 4.94, "6P_FR_2023": 4.86, "6P_FR_2022": 4.82, "6P_FR_2021": 4.83, "6P_MA_2025": 4.74, "6P_MA_2024": 4.69, "6P_MA_2023": 4.9, "6P_MA_2022": 4.84, "6P_MA_2021": 4.87, "8P_FR_2025": 4.71, "8P_FR_2024": 4.54, "8P_FR_2023": 4.68, "8P_FR_2022": 4.6, "8P_FR_2021": 4.57, "8P_MA_2025": 4.08, "8P_MA_2024": 4.21, "8P_MA_2023": 3.83, "8P_MA_2022": 4.17, "8P_MA_2021": 4.19, "8P_DE_2025": 4.55, "8P_DE_2024": 4.06, "8P_DE_2023": 4.5, "8P_DE_2022": 4.84, "8P_DE_2021": 4.62, "tr_4P": 94.4, "tr_6P": 92.2, "tr_8P": 78.6, "lat": 46.538, "lng": 6.558}, {"name": "Centre Lavaux", "type": "1-11", "avg_4P_2025": 5.19, "avg_6P_2025": 5.16, "avg_8P_2025": 5.0, "avg_4P_2125": 5.17, "avg_6P_2125": 5.16, "avg_8P_2125": 4.89, "4P_FR_2025": 5.19, "4P_FR_2024": 5.14, "4P_FR_2023": 5.21, "4P_FR_2022": 5.15, "4P_FR_2021": 5.15, "6P_FR_2025": 5.27, "6P_FR_2024": 5.17, "6P_FR_2023": 5.22, "6P_FR_2022": 4.91, "6P_FR_2021": 5.21, "6P_MA_2025": 5.04, "6P_MA_2024": 5.05, "6P_MA_2023": 5.16, "6P_MA_2022": 5.21, "6P_MA_2021": 5.33, "8P_FR_2025": 4.95, "8P_FR_2024": 4.91, "8P_FR_2023": 4.88, "8P_FR_2022": 4.77, "8P_FR_2021": 4.84, "8P_MA_2025": 4.92, "8P_MA_2024": 4.92, "8P_MA_2023": 4.71, "8P_MA_2022": 4.6, "8P_MA_2021": 4.81, "8P_DE_2025": 5.13, "8P_DE_2024": 4.52, "8P_DE_2023": 5.17, "8P_DE_2022": 5.2, "8P_DE_2021": 4.97, "tr_4P": 96.2, "tr_6P": 96.8, "tr_8P": 96.0, "lat": 46.4872, "lng": 6.7599}, {"name": "Château-d'Oex - Pays-d'Enhaut", "type": "1-11", "avg_4P_2025": 5.21, "avg_6P_2025": 4.78, "avg_8P_2025": 4.49, "avg_4P_2125": 5.1, "avg_6P_2125": 4.88, "avg_8P_2125": 4.47, "4P_FR_2025": 5.21, "4P_FR_2024": 5.02, "4P_FR_2023": 5.14, "4P_FR_2022": 5.06, "4P_FR_2021": 5.09, "6P_FR_2025": 4.82, "6P_FR_2024": 4.92, "6P_FR_2023": 4.85, "6P_FR_2022": 4.72, "6P_FR_2021": 4.87, "6P_MA_2025": 4.75, "6P_MA_2024": 4.72, "6P_MA_2023": 5.11, "6P_MA_2022": 5.07, "6P_MA_2021": 4.97, "8P_FR_2025": 4.41, "8P_FR_2024": 4.37, "8P_FR_2023": 4.2, "8P_FR_2022": 4.45, "8P_FR_2021": 4.68, "8P_MA_2025": 4.48, "8P_MA_2024": 4.22, "8P_MA_2023": 4.1, "8P_MA_2022": 4.29, "8P_MA_2021": 4.53, "8P_DE_2025": 4.58, "8P_DE_2024": 4.02, "8P_DE_2023": 4.69, "8P_DE_2022": 5.11, "8P_DE_2021": 4.87, "tr_4P": 95.8, "tr_6P": 95.3, "tr_8P": 80.5, "lat": 46.4779, "lng": 7.1369}, {"name": "Chavannes-près-Renens et St-Sulpice", "type": "1-11", "avg_4P_2025": 4.84, "avg_6P_2025": 4.9, "avg_8P_2025": 4.49, "avg_4P_2125": 4.95, "avg_6P_2125": 4.91, "avg_8P_2125": 4.56, "4P_FR_2025": 4.84, "4P_FR_2024": 5.23, "4P_FR_2023": 4.92, "4P_FR_2022": 4.91, "4P_FR_2021": 4.86, "6P_FR_2025": 4.84, "6P_FR_2024": 5.04, "6P_FR_2023": 4.84, "6P_FR_2022": 4.73, "6P_FR_2021": 5.02, "6P_MA_2025": 4.95, "6P_MA_2024": 4.81, "6P_MA_2023": 4.9, "6P_MA_2022": 4.86, "6P_MA_2021": 5.14, "8P_FR_2025": 4.45, "8P_FR_2024": 4.48, "8P_FR_2023": 4.55, "8P_FR_2022": 4.5, "8P_FR_2021": 4.57, "8P_MA_2025": 4.34, "8P_MA_2024": 4.42, "8P_MA_2023": 4.31, "8P_MA_2022": 4.41, "8P_MA_2021": 4.51, "8P_DE_2025": 4.67, "8P_DE_2024": 4.44, "8P_DE_2023": 4.92, "8P_DE_2022": 5.03, "8P_DE_2021": 4.83, "tr_4P": 87.7, "tr_6P": 92.2, "tr_8P": 78.0, "lat": 46.5279, "lng": 6.5662}, {"name": "Chavornay", "type": "1-11", "avg_4P_2025": 5.36, "avg_6P_2025": 4.92, "avg_8P_2025": 4.39, "avg_4P_2125": 5.12, "avg_6P_2125": 4.89, "avg_8P_2125": 4.49, "4P_FR_2025": 5.36, "4P_FR_2024": 5.21, "4P_FR_2023": 5.09, "4P_FR_2022": 4.88, "4P_FR_2021": 5.03, "6P_FR_2025": 4.87, "6P_FR_2024": 4.88, "6P_FR_2023": 4.82, "6P_FR_2022": 4.69, "6P_FR_2021": 4.91, "6P_MA_2025": 4.97, "6P_MA_2024": 4.75, "6P_MA_2023": 5.01, "6P_MA_2022": 5.01, "6P_MA_2021": 5.02, "8P_FR_2025": 4.38, "8P_FR_2024": 4.43, "8P_FR_2023": 4.48, "8P_FR_2022": 4.35, "8P_FR_2021": 4.62, "8P_MA_2025": 4.3, "8P_MA_2024": 4.63, "8P_MA_2023": 4.4, "8P_MA_2022": 4.38, "8P_MA_2021": 4.65, "8P_DE_2025": 4.5, "8P_DE_2024": 4.16, "8P_DE_2023": 4.6, "8P_DE_2022": 4.83, "8P_DE_2021": 4.7, "tr_4P": 96.9, "tr_6P": 93.7, "tr_8P": 75.9, "lat": 46.7101, "lng": 6.5783}, {"name": "Cheseaux-sur-Lausanne-La Chamberonne", "type": "1-11", "avg_4P_2025": 5.36, "avg_6P_2025": 5.0, "avg_8P_2025": 4.45, "avg_4P_2125": 5.11, "avg_6P_2125": 5.02, "avg_8P_2125": 4.52, "4P_FR_2025": 5.36, "4P_FR_2024": 5.11, "4P_FR_2023": 5.24, "4P_FR_2022": 4.82, "4P_FR_2021": 5.01, "6P_FR_2025": 5.05, "6P_FR_2024": 5.07, "6P_FR_2023": 4.92, "6P_FR_2022": 4.99, "6P_FR_2021": 5.2, "6P_MA_2025": 4.96, "6P_MA_2024": 4.9, "6P_MA_2023": 4.83, "6P_MA_2022": 5.11, "6P_MA_2021": 5.18, "8P_FR_2025": 4.52, "8P_FR_2024": 4.5, "8P_FR_2023": 4.59, "8P_FR_2022": 4.45, "8P_FR_2021": 4.68, "8P_MA_2025": 4.33, "8P_MA_2024": 4.76, "8P_MA_2023": 4.1, "8P_MA_2022": 4.26, "8P_MA_2021": 4.57, "8P_DE_2025": 4.51, "8P_DE_2024": 4.23, "8P_DE_2023": 4.54, "8P_DE_2022": 4.95, "8P_DE_2021": 4.85, "tr_4P": 94.4, "tr_6P": 95.4, "tr_8P": 81.4, "lat": 46.5548, "lng": 6.6171}, {"name": "Corsier-sur-Vevey et environs", "type": "1-11", "avg_4P_2025": 5.2, "avg_6P_2025": 5.08, "avg_8P_2025": 5.0, "avg_4P_2125": 5.12, "avg_6P_2125": 5.06, "avg_8P_2125": 4.83, "4P_FR_2025": 5.2, "4P_FR_2024": 5.2, "4P_FR_2023": 5.31, "4P_FR_2022": 5.0, "4P_FR_2021": 4.9, "6P_FR_2025": 5.13, "6P_FR_2024": 5.34, "6P_FR_2023": 5.01, "6P_FR_2022": 5.02, "6P_FR_2021": 4.95, "6P_MA_2025": 5.04, "6P_MA_2024": 4.99, "6P_MA_2023": 5.01, "6P_MA_2022": 5.07, "6P_MA_2021": 5.04, "8P_FR_2025": 4.84, "8P_FR_2024": 4.75, "8P_FR_2023": 4.57, "8P_FR_2022": 4.66, "8P_FR_2021": 4.99, "8P_MA_2025": 4.88, "8P_MA_2024": 4.76, "8P_MA_2023": 4.32, "8P_MA_2022": 4.83, "8P_MA_2021": 4.98, "8P_DE_2025": 5.28, "8P_DE_2024": 4.59, "8P_DE_2023": 4.75, "8P_DE_2022": 5.17, "8P_DE_2021": 5.03, "tr_4P": 96.7, "tr_6P": 97.0, "tr_8P": 95.9, "lat": 46.4631, "lng": 6.858}, {"name": "Crassier - Elisabeth de Portes", "type": "1-11", "avg_4P_2025": 5.52, "avg_6P_2025": 5.1, "avg_8P_2025": 4.85, "avg_4P_2125": 5.42, "avg_6P_2125": 5.09, "avg_8P_2125": 4.69, "4P_FR_2025": 5.52, "4P_FR_2024": 5.48, "4P_FR_2023": 5.51, "4P_FR_2022": 5.15, "4P_FR_2021": 5.46, "6P_FR_2025": 5.09, "6P_FR_2024": 5.1, "6P_FR_2023": 5.12, "6P_FR_2022": 4.93, "6P_FR_2021": 5.15, "6P_MA_2025": 5.1, "6P_MA_2024": 4.91, "6P_MA_2023": 5.06, "6P_MA_2022": 5.18, "6P_MA_2021": 5.22, "8P_FR_2025": 4.85, "8P_FR_2024": 4.66, "8P_FR_2023": 4.53, "8P_FR_2022": 4.49, "8P_FR_2021": 4.69, "8P_MA_2025": 4.75, "8P_MA_2024": 4.6, "8P_MA_2023": 4.43, "8P_MA_2022": 4.51, "8P_MA_2021": 4.58, "8P_DE_2025": 4.94, "8P_DE_2024": 4.52, "8P_DE_2023": 4.79, "8P_DE_2022": 5.14, "8P_DE_2021": 4.83, "tr_4P": 100.0, "tr_6P": 98.5, "tr_8P": 90.3, "lat": 46.3742, "lng": 6.1039}, {"name": "Crissier", "type": "1-11", "avg_4P_2025": 4.97, "avg_6P_2025": 4.94, "avg_8P_2025": 4.32, "avg_4P_2125": 5.11, "avg_6P_2125": 4.94, "avg_8P_2125": 4.43, "4P_FR_2025": 4.97, "4P_FR_2024": 5.03, "4P_FR_2023": 5.29, "4P_FR_2022": 5.06, "4P_FR_2021": 5.22, "6P_FR_2025": 4.99, "6P_FR_2024": 5.05, "6P_FR_2023": 4.92, "6P_FR_2022": 4.72, "6P_FR_2021": 5.01, "6P_MA_2025": 4.88, "6P_MA_2024": 4.84, "6P_MA_2023": 4.9, "6P_MA_2022": 4.97, "6P_MA_2021": 5.13, "8P_FR_2025": 4.34, "8P_FR_2024": 4.4, "8P_FR_2023": 4.49, "8P_FR_2022": 4.56, "8P_FR_2021": 4.52, "8P_MA_2025": 4.15, "8P_MA_2024": 4.39, "8P_MA_2023": 4.39, "8P_MA_2022": 4.41, "8P_MA_2021": 4.53, "8P_DE_2025": 4.45, "8P_DE_2024": 4.08, "8P_DE_2023": 4.49, "8P_DE_2022": 4.79, "8P_DE_2021": 4.48, "tr_4P": 92.7, "tr_6P": 94.4, "tr_8P": 73.4, "lat": 46.5362, "lng": 6.564}, {"name": "Cugy et environs", "type": "1-11", "avg_4P_2025": 5.34, "avg_6P_2025": 4.89, "avg_8P_2025": 4.78, "avg_4P_2125": 5.21, "avg_6P_2125": 5.04, "avg_8P_2125": 4.8, "4P_FR_2025": 5.34, "4P_FR_2024": 5.21, "4P_FR_2023": 5.18, "4P_FR_2022": 5.0, "4P_FR_2021": 5.31, "6P_FR_2025": 4.94, "6P_FR_2024": 5.26, "6P_FR_2023": 4.97, "6P_FR_2022": 5.01, "6P_FR_2021": 5.07, "6P_MA_2025": 4.84, "6P_MA_2024": 4.9, "6P_MA_2023": 4.97, "6P_MA_2022": 5.12, "6P_MA_2021": 5.35, "8P_FR_2025": 4.8, "8P_FR_2024": 4.9, "8P_FR_2023": 4.71, "8P_FR_2022": 4.71, "8P_FR_2021": 4.83, "8P_MA_2025": 4.76, "8P_MA_2024": 4.7, "8P_MA_2023": 4.69, "8P_MA_2022": 4.62, "8P_MA_2021": 5.01, "8P_DE_2025": 4.79, "8P_DE_2024": 4.43, "8P_DE_2023": 4.88, "8P_DE_2022": 5.14, "8P_DE_2021": 4.96, "tr_4P": 94.6, "tr_6P": 95.2, "tr_8P": 91.5, "lat": 46.5681, "lng": 6.6771}, {"name": "Ecublens", "type": "1-11", "avg_4P_2025": 5.03, "avg_6P_2025": 5.09, "avg_8P_2025": 4.61, "avg_4P_2125": 4.95, "avg_6P_2125": 5.0, "avg_8P_2125": 4.53, "4P_FR_2025": 5.03, "4P_FR_2024": 4.88, "4P_FR_2023": 5.21, "4P_FR_2022": 4.77, "4P_FR_2021": 4.88, "6P_FR_2025": 5.1, "6P_FR_2024": 5.02, "6P_FR_2023": 4.85, "6P_FR_2022": 4.85, "6P_FR_2021": 5.1, "6P_MA_2025": 5.09, "6P_MA_2024": 4.86, "6P_MA_2023": 4.99, "6P_MA_2022": 5.03, "6P_MA_2021": 5.16, "8P_FR_2025": 4.46, "8P_FR_2024": 4.65, "8P_FR_2023": 4.36, "8P_FR_2022": 4.36, "8P_FR_2021": 4.57, "8P_MA_2025": 4.62, "8P_MA_2024": 4.61, "8P_MA_2023": 4.12, "8P_MA_2022": 4.25, "8P_MA_2021": 4.36, "8P_DE_2025": 4.75, "8P_DE_2024": 4.59, "8P_DE_2023": 4.6, "8P_DE_2022": 4.95, "8P_DE_2021": 4.64, "tr_4P": 97.4, "tr_6P": 98.1, "tr_8P": 87.5, "lat": 46.53, "lng": 6.562}, {"name": "Epalinges", "type": "1-11", "avg_4P_2025": 5.34, "avg_6P_2025": 5.01, "avg_8P_2025": 4.94, "avg_4P_2125": 5.22, "avg_6P_2125": 5.09, "avg_8P_2125": 4.9, "4P_FR_2025": 5.34, "4P_FR_2024": 5.25, "4P_FR_2023": 5.28, "4P_FR_2022": 5.11, "4P_FR_2021": 5.11, "6P_FR_2025": 5.05, "6P_FR_2024": 5.21, "6P_FR_2023": 5.09, "6P_FR_2022": 5.05, "6P_FR_2021": 5.22, "6P_MA_2025": 4.98, "6P_MA_2024": 4.98, "6P_MA_2023": 4.86, "6P_MA_2022": 5.22, "6P_MA_2021": 5.24, "8P_FR_2025": 4.85, "8P_FR_2024": 4.74, "8P_FR_2023": 4.77, "8P_FR_2022": 4.82, "8P_FR_2021": 4.83, "8P_MA_2025": 4.69, "8P_MA_2024": 4.85, "8P_MA_2023": 4.78, "8P_MA_2022": 4.79, "8P_MA_2021": 4.81, "8P_DE_2025": 5.28, "8P_DE_2024": 4.61, "8P_DE_2023": 5.18, "8P_DE_2022": 5.36, "8P_DE_2021": 5.16, "tr_4P": 97.3, "tr_6P": 94.2, "tr_8P": 94.1, "lat": 46.56, "lng": 6.673}, {"name": "Genolier et environs", "type": "1-11", "avg_4P_2025": 5.41, "avg_6P_2025": 5.09, "avg_8P_2025": 4.62, "avg_4P_2125": 5.26, "avg_6P_2125": 5.06, "avg_8P_2125": 4.85, "4P_FR_2025": 5.41, "4P_FR_2024": 5.2, "4P_FR_2023": 5.37, "4P_FR_2022": 5.19, "4P_FR_2021": 5.13, "6P_FR_2025": 5.06, "6P_FR_2024": 5.16, "6P_FR_2023": 4.86, "6P_FR_2022": 4.91, "6P_FR_2021": 5.13, "6P_MA_2025": 5.11, "6P_MA_2024": 4.98, "6P_MA_2023": 5.06, "6P_MA_2022": 5.09, "6P_MA_2021": 5.24, "8P_FR_2025": 4.72, "8P_FR_2024": 4.81, "8P_FR_2023": 4.96, "8P_FR_2022": 4.86, "8P_FR_2021": 4.73, "8P_MA_2025": 4.41, "8P_MA_2024": 4.87, "8P_MA_2023": 4.72, "8P_MA_2022": 4.88, "8P_MA_2021": 4.74, "8P_DE_2025": 4.75, "8P_DE_2024": 4.8, "8P_DE_2023": 5.26, "8P_DE_2022": 5.25, "8P_DE_2021": 5.0, "tr_4P": 97.2, "tr_6P": 96.9, "tr_8P": 87.6, "lat": 46.4038, "lng": 6.1918}, {"name": "Grandson", "type": "1-11", "avg_4P_2025": 5.58, "avg_6P_2025": 5.0, "avg_8P_2025": 4.74, "avg_4P_2125": 5.21, "avg_6P_2125": 5.04, "avg_8P_2125": 4.71, "4P_FR_2025": 5.58, "4P_FR_2024": 5.25, "4P_FR_2023": 5.24, "4P_FR_2022": 4.88, "4P_FR_2021": 5.09, "6P_FR_2025": 5.02, "6P_FR_2024": 5.01, "6P_FR_2023": 5.13, "6P_FR_2022": 5.13, "6P_FR_2021": 5.14, "6P_MA_2025": 4.98, "6P_MA_2024": 4.68, "6P_MA_2023": 5.03, "6P_MA_2022": 5.15, "6P_MA_2021": 5.14, "8P_FR_2025": 4.7, "8P_FR_2024": 4.8, "8P_FR_2023": 4.74, "8P_FR_2022": 4.65, "8P_FR_2021": 4.79, "8P_MA_2025": 4.71, "8P_MA_2024": 4.61, "8P_MA_2023": 4.5, "8P_MA_2022": 4.56, "8P_MA_2021": 4.64, "8P_DE_2025": 4.81, "8P_DE_2024": 4.49, "8P_DE_2023": 4.77, "8P_DE_2022": 5.08, "8P_DE_2021": 4.78, "tr_4P": 96.8, "tr_6P": 97.0, "tr_8P": 91.5, "lat": 46.813, "lng": 6.647}, {"name": "Jorat", "type": "1-11", "avg_4P_2025": 5.14, "avg_6P_2025": 4.95, "avg_8P_2025": 4.77, "avg_4P_2125": 5.17, "avg_6P_2125": 4.95, "avg_8P_2125": 4.78, "4P_FR_2025": 5.14, "4P_FR_2024": 5.38, "4P_FR_2023": 5.09, "4P_FR_2022": 5.15, "4P_FR_2021": 5.11, "6P_FR_2025": 4.95, "6P_FR_2024": 5.07, "6P_FR_2023": 4.81, "6P_FR_2022": 4.87, "6P_FR_2021": 5.09, "6P_MA_2025": 4.94, "6P_MA_2024": 4.87, "6P_MA_2023": 4.8, "6P_MA_2022": 4.93, "6P_MA_2021": 5.15, "8P_FR_2025": 4.7, "8P_FR_2024": 4.7, "8P_FR_2023": 4.72, "8P_FR_2022": 4.8, "8P_FR_2021": 4.75, "8P_MA_2025": 4.65, "8P_MA_2024": 4.79, "8P_MA_2023": 4.66, "8P_MA_2022": 4.84, "8P_MA_2021": 4.67, "8P_DE_2025": 4.96, "8P_DE_2024": 4.62, "8P_DE_2023": 4.87, "8P_DE_2022": 5.15, "8P_DE_2021": 4.84, "tr_4P": 91.8, "tr_6P": 94.0, "tr_8P": 91.0, "lat": 46.6048, "lng": 6.7298}, {"name": "La Sarraz et environs", "type": "1-11", "avg_4P_2025": 5.12, "avg_6P_2025": 4.91, "avg_8P_2025": 4.85, "avg_4P_2125": 5.06, "avg_6P_2125": 4.89, "avg_8P_2125": 4.64, "4P_FR_2025": 5.12, "4P_FR_2024": 5.06, "4P_FR_2023": 5.14, "4P_FR_2022": 5.0, "4P_FR_2021": 5.0, "6P_FR_2025": 4.95, "6P_FR_2024": 4.98, "6P_FR_2023": 4.93, "6P_FR_2022": 4.75, "6P_FR_2021": 5.0, "6P_MA_2025": 4.88, "6P_MA_2024": 4.71, "6P_MA_2023": 4.94, "6P_MA_2022": 4.89, "6P_MA_2021": 4.92, "8P_FR_2025": 4.89, "8P_FR_2024": 4.75, "8P_FR_2023": 4.38, "8P_FR_2022": 4.66, "8P_FR_2021": 4.69, "8P_MA_2025": 4.8, "8P_MA_2024": 4.78, "8P_MA_2023": 4.2, "8P_MA_2022": 4.48, "8P_MA_2021": 4.78, "8P_DE_2025": 4.84, "8P_DE_2024": 4.31, "8P_DE_2023": 4.39, "8P_DE_2022": 4.91, "8P_DE_2021": 4.67, "tr_4P": 91.2, "tr_6P": 95.4, "tr_8P": 96.3, "lat": 46.639, "lng": 6.5282}, {"name": "La Tour-de-Peilz", "type": "1-11", "avg_4P_2025": 5.27, "avg_6P_2025": 5.04, "avg_8P_2025": 4.88, "avg_4P_2125": 5.04, "avg_6P_2125": 4.94, "avg_8P_2125": 4.82, "4P_FR_2025": 5.27, "4P_FR_2024": 4.95, "4P_FR_2023": 5.22, "4P_FR_2022": 4.84, "4P_FR_2021": 4.93, "6P_FR_2025": 4.96, "6P_FR_2024": 5.04, "6P_FR_2023": 4.93, "6P_FR_2022": 4.7, "6P_FR_2021": 4.92, "6P_MA_2025": 5.11, "6P_MA_2024": 4.77, "6P_MA_2023": 5.04, "6P_MA_2022": 4.9, "6P_MA_2021": 5.04, "8P_FR_2025": 4.8, "8P_FR_2024": 4.9, "8P_FR_2023": 4.7, "8P_FR_2022": 4.88, "8P_FR_2021": 4.76, "8P_MA_2025": 4.86, "8P_MA_2024": 4.8, "8P_MA_2023": 4.7, "8P_MA_2022": 4.69, "8P_MA_2021": 4.69, "8P_DE_2025": 4.97, "8P_DE_2024": 4.77, "8P_DE_2023": 4.83, "8P_DE_2022": 5.17, "8P_DE_2021": 4.76, "tr_4P": 96.4, "tr_6P": 97.3, "tr_8P": 91.6, "lat": 46.4531, "lng": 6.863}, {"name": "Le Mont-sur-Lausanne", "type": "1-11", "avg_4P_2025": 5.29, "avg_6P_2025": 4.96, "avg_8P_2025": 4.74, "avg_4P_2125": 5.22, "avg_6P_2125": 5.13, "avg_8P_2125": 4.8, "4P_FR_2025": 5.29, "4P_FR_2024": 5.51, "4P_FR_2023": 5.08, "4P_FR_2022": 5.23, "4P_FR_2021": 4.96, "6P_FR_2025": 4.94, "6P_FR_2024": 5.37, "6P_FR_2023": 5.07, "6P_FR_2022": 4.99, "6P_FR_2021": 5.14, "6P_MA_2025": 4.99, "6P_MA_2024": 5.17, "6P_MA_2023": 5.22, "6P_MA_2022": 5.15, "6P_MA_2021": 5.23, "8P_FR_2025": 4.7, "8P_FR_2024": 4.87, "8P_FR_2023": 4.55, "8P_FR_2022": 4.9, "8P_FR_2021": 4.76, "8P_MA_2025": 4.7, "8P_MA_2024": 4.71, "8P_MA_2023": 4.7, "8P_MA_2022": 4.85, "8P_MA_2021": 4.85, "8P_DE_2025": 4.82, "8P_DE_2024": 4.53, "8P_DE_2023": 4.92, "8P_DE_2022": 5.19, "8P_DE_2021": 4.89, "tr_4P": 97.6, "tr_6P": 93.8, "tr_8P": 86.2, "lat": 46.5541, "lng": 6.617}, {"name": "Les Ormonts-Leysin", "type": "1-11", "avg_4P_2025": 5.05, "avg_6P_2025": 5.05, "avg_8P_2025": 4.37, "avg_4P_2125": 5.06, "avg_6P_2125": 4.92, "avg_8P_2125": 4.4, "4P_FR_2025": 5.05, "4P_FR_2024": 5.43, "4P_FR_2023": 5.14, "4P_FR_2022": 4.77, "4P_FR_2021": 4.92, "6P_FR_2025": 5.13, "6P_FR_2024": 5.0, "6P_FR_2023": 4.84, "6P_FR_2022": 4.78, "6P_FR_2021": 5.15, "6P_MA_2025": 4.98, "6P_MA_2024": 4.69, "6P_MA_2023": 4.88, "6P_MA_2022": 4.68, "6P_MA_2021": 5.08, "8P_FR_2025": 4.45, "8P_FR_2024": 4.66, "8P_FR_2023": 4.45, "8P_FR_2022": 4.52, "8P_FR_2021": 4.37, "8P_MA_2025": 4.26, "8P_MA_2024": 4.37, "8P_MA_2023": 4.09, "8P_MA_2022": 4.36, "8P_MA_2021": 4.14, "8P_DE_2025": 4.39, "8P_DE_2024": 4.43, "8P_DE_2023": 4.28, "8P_DE_2022": 4.81, "8P_DE_2021": 4.48, "tr_4P": 90.7, "tr_6P": 98.0, "tr_8P": 75.0, "lat": 46.4121, "lng": 7.0059}, {"name": "Lutry", "type": "1-11", "avg_4P_2025": 5.7, "avg_6P_2025": 5.18, "avg_8P_2025": 4.93, "avg_4P_2125": 5.55, "avg_6P_2125": 5.23, "avg_8P_2125": 4.77, "4P_FR_2025": 5.7, "4P_FR_2024": 5.47, "4P_FR_2023": 5.64, "4P_FR_2022": 5.33, "4P_FR_2021": 5.61, "6P_FR_2025": 5.21, "6P_FR_2024": 5.4, "6P_FR_2023": 5.15, "6P_FR_2022": 5.21, "6P_FR_2021": 5.23, "6P_MA_2025": 5.15, "6P_MA_2024": 5.29, "6P_MA_2023": 5.28, "6P_MA_2022": 5.22, "6P_MA_2021": 5.17, "8P_FR_2025": 4.61, "8P_FR_2024": 4.61, "8P_FR_2023": 4.45, "8P_FR_2022": 4.53, "8P_FR_2021": 4.72, "8P_MA_2025": 4.88, "8P_MA_2024": 4.79, "8P_MA_2023": 4.61, "8P_MA_2022": 4.59, "8P_MA_2021": 4.69, "8P_DE_2025": 5.31, "8P_DE_2024": 4.77, "8P_DE_2023": 4.82, "8P_DE_2022": 5.1, "8P_DE_2021": 5.13, "tr_4P": 98.1, "tr_6P": 97.9, "tr_8P": 93.6, "lat": 46.5048, "lng": 6.6862}, {"name": "Montreux-Est", "type": "1-11", "avg_4P_2025": 4.94, "avg_6P_2025": 4.83, "avg_8P_2025": 4.51, "avg_4P_2125": 4.85, "avg_6P_2125": 4.77, "avg_8P_2125": 4.45, "4P_FR_2025": 4.94, "4P_FR_2024": 5.01, "4P_FR_2023": 4.83, "4P_FR_2022": 4.52, "4P_FR_2021": 4.95, "6P_FR_2025": 4.86, "6P_FR_2024": 4.85, "6P_FR_2023": 4.69, "6P_FR_2022": 4.67, "6P_FR_2021": 4.85, "6P_MA_2025": 4.8, "6P_MA_2024": 4.51, "6P_MA_2023": 4.76, "6P_MA_2022": 4.66, "6P_MA_2021": 5.03, "8P_FR_2025": 4.61, "8P_FR_2024": 4.5, "8P_FR_2023": 4.46, "8P_FR_2022": 4.45, "8P_FR_2021": 4.65, "8P_MA_2025": 4.36, "8P_MA_2024": 4.19, "8P_MA_2023": 4.03, "8P_MA_2022": 4.06, "8P_MA_2021": 4.32, "8P_DE_2025": 4.55, "8P_DE_2024": 4.25, "8P_DE_2023": 4.74, "8P_DE_2022": 4.85, "8P_DE_2021": 4.72, "tr_4P": 88.0, "tr_6P": 93.0, "tr_8P": 79.4, "lat": 46.4359, "lng": 6.921}, {"name": "Montreux-Ouest", "type": "1-11", "avg_4P_2025": 4.76, "avg_6P_2025": 4.6, "avg_8P_2025": 4.27, "avg_4P_2125": 4.83, "avg_6P_2125": 4.65, "avg_8P_2125": 4.28, "4P_FR_2025": 4.76, "4P_FR_2024": 4.86, "4P_FR_2023": 4.97, "4P_FR_2022": 4.55, "4P_FR_2021": 5.02, "6P_FR_2025": 4.47, "6P_FR_2024": 4.76, "6P_FR_2023": 4.7, "6P_FR_2022": 4.4, "6P_FR_2021": 4.8, "6P_MA_2025": 4.73, "6P_MA_2024": 4.61, "6P_MA_2023": 4.65, "6P_MA_2022": 4.58, "6P_MA_2021": 4.78, "8P_FR_2025": 4.2, "8P_FR_2024": 4.37, "8P_FR_2023": 4.38, "8P_FR_2022": 4.15, "8P_FR_2021": 4.59, "8P_MA_2025": 4.19, "8P_MA_2024": 3.97, "8P_MA_2023": 4.36, "8P_MA_2022": 3.98, "8P_MA_2021": 4.52, "8P_DE_2025": 4.42, "8P_DE_2024": 3.66, "8P_DE_2023": 4.38, "8P_DE_2022": 4.51, "8P_DE_2021": 4.52, "tr_4P": 83.3, "tr_6P": 83.7, "tr_8P": 68.3, "lat": 46.4291, "lng": 6.9079}, {"name": "Ollon", "type": "1-11", "avg_4P_2025": 5.3, "avg_6P_2025": 4.95, "avg_8P_2025": 4.65, "avg_4P_2125": 5.16, "avg_6P_2125": 4.96, "avg_8P_2125": 4.67, "4P_FR_2025": 5.3, "4P_FR_2024": 5.5, "4P_FR_2023": 4.99, "4P_FR_2022": 5.0, "4P_FR_2021": 5.03, "6P_FR_2025": 4.8, "6P_FR_2024": 5.13, "6P_FR_2023": 4.83, "6P_FR_2022": 4.8, "6P_FR_2021": 5.14, "6P_MA_2025": 5.09, "6P_MA_2024": 4.74, "6P_MA_2023": 4.9, "6P_MA_2022": 4.91, "6P_MA_2021": 5.28, "8P_FR_2025": 4.68, "8P_FR_2024": 4.58, "8P_FR_2023": 4.67, "8P_FR_2022": 4.71, "8P_FR_2021": 4.75, "8P_MA_2025": 4.51, "8P_MA_2024": 4.42, "8P_MA_2023": 4.55, "8P_MA_2022": 4.55, "8P_MA_2021": 4.63, "8P_DE_2025": 4.78, "8P_DE_2024": 4.4, "8P_DE_2023": 4.92, "8P_DE_2022": 5.0, "8P_DE_2021": 4.84, "tr_4P": 97.5, "tr_6P": 97.1, "tr_8P": 85.9, "lat": 46.3021, "lng": 6.9672}, {"name": "Oron - Palézieux", "type": "1-11", "avg_4P_2025": 4.93, "avg_6P_2025": 4.9, "avg_8P_2025": 4.5, "avg_4P_2125": 4.97, "avg_6P_2125": 4.98, "avg_8P_2125": 4.55, "4P_FR_2025": 4.93, "4P_FR_2024": 5.09, "4P_FR_2023": 4.84, "4P_FR_2022": 4.94, "4P_FR_2021": 5.06, "6P_FR_2025": 5.06, "6P_FR_2024": 5.13, "6P_FR_2023": 4.83, "6P_FR_2022": 4.91, "6P_FR_2021": 4.99, "6P_MA_2025": 4.74, "6P_MA_2024": 4.87, "6P_MA_2023": 5.04, "6P_MA_2022": 5.1, "6P_MA_2021": 5.14, "8P_FR_2025": 4.42, "8P_FR_2024": 4.67, "8P_FR_2023": 4.71, "8P_FR_2022": 4.34, "8P_FR_2021": 4.59, "8P_MA_2025": 4.41, "8P_MA_2024": 4.57, "8P_MA_2023": 4.51, "8P_MA_2022": 4.16, "8P_MA_2021": 4.63, "8P_DE_2025": 4.66, "8P_DE_2024": 4.42, "8P_DE_2023": 4.71, "8P_DE_2022": 4.8, "8P_DE_2021": 4.67, "tr_4P": 87.8, "tr_6P": 96.2, "tr_8P": 80.2, "lat": 46.5712, "lng": 6.832}, {"name": "Préverenges et environs", "type": "1-11", "avg_4P_2025": 5.09, "avg_6P_2025": 5.25, "avg_8P_2025": 4.76, "avg_4P_2125": 5.16, "avg_6P_2125": 5.14, "avg_8P_2125": 4.72, "4P_FR_2025": 5.09, "4P_FR_2024": 5.28, "4P_FR_2023": 5.23, "4P_FR_2022": 5.16, "4P_FR_2021": 5.03, "6P_FR_2025": 5.22, "6P_FR_2024": 5.07, "6P_FR_2023": 5.04, "6P_FR_2022": 4.89, "6P_FR_2021": 5.17, "6P_MA_2025": 5.28, "6P_MA_2024": 4.95, "6P_MA_2023": 5.25, "6P_MA_2022": 5.17, "6P_MA_2021": 5.38, "8P_FR_2025": 4.55, "8P_FR_2024": 4.58, "8P_FR_2023": 4.52, "8P_FR_2022": 4.56, "8P_FR_2021": 4.75, "8P_MA_2025": 4.73, "8P_MA_2024": 4.7, "8P_MA_2023": 4.58, "8P_MA_2022": 4.8, "8P_MA_2021": 4.69, "8P_DE_2025": 5.01, "8P_DE_2024": 4.47, "8P_DE_2023": 4.95, "8P_DE_2022": 5.1, "8P_DE_2021": 4.87, "tr_4P": 92.2, "tr_6P": 99.6, "tr_8P": 88.0, "lat": 46.5131, "lng": 6.5301}, {"name": "Saint-Prex et environs", "type": "1-11", "avg_4P_2025": 5.14, "avg_6P_2025": 5.15, "avg_8P_2025": 4.73, "avg_4P_2125": 5.2, "avg_6P_2125": 5.08, "avg_8P_2125": 4.72, "4P_FR_2025": 5.14, "4P_FR_2024": 5.53, "4P_FR_2023": 5.29, "4P_FR_2022": 4.97, "4P_FR_2021": 5.08, "6P_FR_2025": 5.13, "6P_FR_2024": 5.02, "6P_FR_2023": 4.98, "6P_FR_2022": 4.98, "6P_FR_2021": 5.19, "6P_MA_2025": 5.17, "6P_MA_2024": 4.92, "6P_MA_2023": 5.13, "6P_MA_2022": 5.08, "6P_MA_2021": 5.22, "8P_FR_2025": 4.64, "8P_FR_2024": 4.6, "8P_FR_2023": 4.49, "8P_FR_2022": 4.83, "8P_FR_2021": 4.82, "8P_MA_2025": 4.56, "8P_MA_2024": 4.45, "8P_MA_2023": 4.49, "8P_MA_2022": 4.64, "8P_MA_2021": 4.8, "8P_DE_2025": 4.99, "8P_DE_2024": 4.47, "8P_DE_2023": 4.96, "8P_DE_2022": 5.13, "8P_DE_2021": 4.96, "tr_4P": 95.3, "tr_6P": 97.2, "tr_8P": 89.7, "lat": 46.4812, "lng": 6.4492}, {"name": "Sainte-Croix et environs", "type": "1-11", "avg_4P_2025": 5.12, "avg_6P_2025": 4.78, "avg_8P_2025": 4.42, "avg_4P_2125": 5.09, "avg_6P_2125": 4.88, "avg_8P_2125": 4.33, "4P_FR_2025": 5.12, "4P_FR_2024": 5.13, "4P_FR_2023": 5.02, "4P_FR_2022": 4.82, "4P_FR_2021": 5.38, "6P_FR_2025": 4.88, "6P_FR_2024": 5.15, "6P_FR_2023": 4.97, "6P_FR_2022": 4.84, "6P_FR_2021": 4.98, "6P_MA_2025": 4.69, "6P_MA_2024": 4.63, "6P_MA_2023": 4.87, "6P_MA_2022": 4.89, "6P_MA_2021": 4.88, "8P_FR_2025": 4.51, "8P_FR_2024": 4.59, "8P_FR_2023": 4.49, "8P_FR_2022": 4.52, "8P_FR_2021": 4.38, "8P_MA_2025": 4.34, "8P_MA_2024": 4.12, "8P_MA_2023": 4.06, "8P_MA_2022": 4.15, "8P_MA_2021": 4.19, "8P_DE_2025": 4.42, "8P_DE_2024": 3.88, "8P_DE_2023": 4.34, "8P_DE_2022": 4.66, "8P_DE_2021": 4.33, "tr_4P": 94.8, "tr_6P": 90.3, "tr_8P": 77.3, "lat": 46.9238, "lng": 6.5042}, {"name": "Vallée de Joux", "type": "1-11", "avg_4P_2025": 5.21, "avg_6P_2025": 4.87, "avg_8P_2025": 4.56, "avg_4P_2125": 4.82, "avg_6P_2125": 4.87, "avg_8P_2125": 4.43, "4P_FR_2025": 5.21, "4P_FR_2024": 4.98, "4P_FR_2023": 4.65, "4P_FR_2022": 4.61, "4P_FR_2021": 4.67, "6P_FR_2025": 4.82, "6P_FR_2024": 4.89, "6P_FR_2023": 4.78, "6P_FR_2022": 4.78, "6P_FR_2021": 4.88, "6P_MA_2025": 4.92, "6P_MA_2024": 4.78, "6P_MA_2023": 4.88, "6P_MA_2022": 4.89, "6P_MA_2021": 5.1, "8P_FR_2025": 4.77, "8P_FR_2024": 4.46, "8P_FR_2023": 4.65, "8P_FR_2022": 4.27, "8P_FR_2021": 4.56, "8P_MA_2025": 4.43, "8P_MA_2024": 4.26, "8P_MA_2023": 4.1, "8P_MA_2022": 4.13, "8P_MA_2021": 4.37, "8P_DE_2025": 4.48, "8P_DE_2024": 4.17, "8P_DE_2023": 4.55, "8P_DE_2022": 4.71, "8P_DE_2021": 4.55, "tr_4P": 91.2, "tr_6P": 95.4, "tr_8P": 86.3, "lat": 46.6152, "lng": 6.1938}, {"name": "Vallorbe, Ballaigues et Vallon du Nozon", "type": "1-11", "avg_4P_2025": 5.1, "avg_6P_2025": 4.76, "avg_8P_2025": 4.42, "avg_4P_2125": 4.92, "avg_6P_2125": 4.79, "avg_8P_2125": 4.45, "4P_FR_2025": 5.1, "4P_FR_2024": 4.93, "4P_FR_2023": 4.96, "4P_FR_2022": 4.78, "4P_FR_2021": 4.82, "6P_FR_2025": 4.8, "6P_FR_2024": 4.94, "6P_FR_2023": 4.77, "6P_FR_2022": 4.73, "6P_FR_2021": 4.83, "6P_MA_2025": 4.71, "6P_MA_2024": 4.62, "6P_MA_2023": 4.86, "6P_MA_2022": 4.76, "6P_MA_2021": 4.89, "8P_FR_2025": 4.46, "8P_FR_2024": 4.7, "8P_FR_2023": 4.36, "8P_FR_2022": 4.43, "8P_FR_2021": 4.57, "8P_MA_2025": 4.35, "8P_MA_2024": 4.59, "8P_MA_2023": 4.12, "8P_MA_2022": 4.24, "8P_MA_2021": 4.53, "8P_DE_2025": 4.45, "8P_DE_2024": 4.32, "8P_DE_2023": 4.17, "8P_DE_2022": 4.84, "8P_DE_2021": 4.61, "tr_4P": 90.2, "tr_6P": 93.1, "tr_8P": 79.7, "lat": 46.7272, "lng": 6.3762}, {"name": "Villeneuve Haut-Lac", "type": "1-11", "avg_4P_2025": 4.87, "avg_6P_2025": 4.95, "avg_8P_2025": 4.28, "avg_4P_2125": 4.84, "avg_6P_2125": 4.81, "avg_8P_2125": 4.36, "4P_FR_2025": 4.87, "4P_FR_2024": 4.78, "4P_FR_2023": 5.02, "4P_FR_2022": 4.8, "4P_FR_2021": 4.74, "6P_FR_2025": 4.96, "6P_FR_2024": 4.96, "6P_FR_2023": 4.79, "6P_FR_2022": 4.63, "6P_FR_2021": 4.92, "6P_MA_2025": 4.95, "6P_MA_2024": 4.66, "6P_MA_2023": 4.75, "6P_MA_2022": 4.53, "6P_MA_2021": 4.98, "8P_FR_2025": 4.1, "8P_FR_2024": 4.39, "8P_FR_2023": 4.3, "8P_FR_2022": 4.28, "8P_FR_2021": 4.52, "8P_MA_2025": 4.3, "8P_MA_2024": 4.3, "8P_MA_2023": 4.18, "8P_MA_2022": 4.11, "8P_MA_2021": 4.35, "8P_DE_2025": 4.45, "8P_DE_2024": 4.28, "8P_DE_2023": 4.57, "8P_DE_2022": 4.82, "8P_DE_2021": 4.48, "tr_4P": 91.9, "tr_6P": 96.8, "tr_8P": 72.9, "lat": 46.3929, "lng": 6.9318}, {"name": "Yvonand et environs", "type": "1-11", "avg_4P_2025": 5.27, "avg_6P_2025": 4.91, "avg_8P_2025": 4.7, "avg_4P_2125": 5.02, "avg_6P_2125": 4.98, "avg_8P_2125": 4.69, "4P_FR_2025": 5.27, "4P_FR_2024": 5.04, "4P_FR_2023": 4.89, "4P_FR_2022": 4.66, "4P_FR_2021": 5.24, "6P_FR_2025": 4.87, "6P_FR_2024": 4.97, "6P_FR_2023": 5.04, "6P_FR_2022": 4.75, "6P_FR_2021": 5.05, "6P_MA_2025": 4.96, "6P_MA_2024": 4.9, "6P_MA_2023": 5.14, "6P_MA_2022": 4.92, "6P_MA_2021": 5.21, "8P_FR_2025": 4.64, "8P_FR_2024": 4.65, "8P_FR_2023": 4.53, "8P_FR_2022": 4.5, "8P_FR_2021": 4.82, "8P_MA_2025": 4.69, "8P_MA_2024": 4.53, "8P_MA_2023": 4.43, "8P_MA_2022": 4.69, "8P_MA_2021": 4.82, "8P_DE_2025": 4.77, "8P_DE_2024": 4.44, "8P_DE_2023": 4.83, "8P_DE_2022": 5.0, "8P_DE_2021": 4.93, "tr_4P": 95.1, "tr_6P": 94.9, "tr_8P": 92.2, "lat": 46.7999, "lng": 6.7431}, {"name": "Lausanne - Belvédère", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.55, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.42, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.5, "8P_FR_2024": 4.33, "8P_FR_2023": 4.39, "8P_FR_2022": 4.36, "8P_FR_2021": 4.62, "8P_MA_2025": 4.43, "8P_MA_2024": 4.17, "8P_MA_2023": 4.08, "8P_MA_2022": 4.2, "8P_MA_2021": 4.36, "8P_DE_2025": 4.7, "8P_DE_2024": 4.13, "8P_DE_2023": 4.6, "8P_DE_2022": 4.76, "8P_DE_2021": 4.62, "tr_4P": null, "tr_6P": null, "tr_8P": 80.4, "lat": 46.5102, "lng": 6.6429}, {"name": "Lausanne - Bergières", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.64, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.53, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.67, "8P_FR_2024": 4.51, "8P_FR_2023": 4.49, "8P_FR_2022": 4.5, "8P_FR_2021": 4.62, "8P_MA_2025": 4.64, "8P_MA_2024": 4.33, "8P_MA_2023": 4.42, "8P_MA_2022": 4.33, "8P_MA_2021": 4.58, "8P_DE_2025": 4.63, "8P_DE_2024": 4.11, "8P_DE_2023": 4.69, "8P_DE_2022": 4.85, "8P_DE_2021": 4.55, "tr_4P": null, "tr_6P": null, "tr_8P": 85.9, "lat": 46.5311, "lng": 6.6298}, {"name": "Lausanne - Béthusy", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.72, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.64, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.81, "8P_FR_2024": 4.74, "8P_FR_2023": 4.76, "8P_FR_2022": 4.6, "8P_FR_2021": 4.76, "8P_MA_2025": 4.49, "8P_MA_2024": 4.42, "8P_MA_2023": 4.53, "8P_MA_2022": 4.07, "8P_MA_2021": 4.55, "8P_DE_2025": 4.86, "8P_DE_2024": 4.31, "8P_DE_2023": 4.83, "8P_DE_2022": 5.02, "8P_DE_2021": 4.87, "tr_4P": null, "tr_6P": null, "tr_8P": 87.5, "lat": 46.5271, "lng": 6.6491}, {"name": "Lausanne - CF Ramuz", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.22, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.2, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.3, "8P_FR_2024": 4.1, "8P_FR_2023": 4.3, "8P_FR_2022": 4.06, "8P_FR_2021": 4.42, "8P_MA_2025": 4.03, "8P_MA_2024": 3.91, "8P_MA_2023": 3.89, "8P_MA_2022": 4.1, "8P_MA_2021": 4.25, "8P_DE_2025": 4.34, "8P_DE_2024": 3.91, "8P_DE_2023": 4.29, "8P_DE_2022": 4.65, "8P_DE_2021": 4.42, "tr_4P": null, "tr_6P": null, "tr_8P": 70.9, "lat": 46.5092, "lng": 6.6098}, {"name": "Lausanne - Isabelle-de-Montolieu", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.31, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.31, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.37, "8P_FR_2024": 4.42, "8P_FR_2023": 4.31, "8P_FR_2022": 4.47, "8P_FR_2021": 4.39, "8P_MA_2025": 4.14, "8P_MA_2024": 4.1, "8P_MA_2023": 3.88, "8P_MA_2022": 4.14, "8P_MA_2021": 4.16, "8P_DE_2025": 4.43, "8P_DE_2024": 4.21, "8P_DE_2023": 4.37, "8P_DE_2022": 4.82, "8P_DE_2021": 4.41, "tr_4P": null, "tr_6P": null, "tr_8P": 74.1, "lat": 46.5191, "lng": 6.6158}, {"name": "Lausanne - L'Elysée", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.99, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.8, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.94, "8P_FR_2024": 4.74, "8P_FR_2023": 4.83, "8P_FR_2022": 4.63, "8P_FR_2021": 4.93, "8P_MA_2025": 4.9, "8P_MA_2024": 4.51, "8P_MA_2023": 4.66, "8P_MA_2022": 4.51, "8P_MA_2021": 4.73, "8P_DE_2025": 5.11, "8P_DE_2024": 4.54, "8P_DE_2023": 5.01, "8P_DE_2022": 5.1, "8P_DE_2021": 4.79, "tr_4P": null, "tr_6P": null, "tr_8P": 94.5, "lat": 46.5211, "lng": 6.6371}, {"name": "Lausanne - Villamont", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.68, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.68, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.63, "8P_FR_2024": 4.67, "8P_FR_2023": 4.75, "8P_FR_2022": 4.62, "8P_FR_2021": 4.72, "8P_MA_2025": 4.48, "8P_MA_2024": 4.55, "8P_MA_2023": 4.56, "8P_MA_2022": 4.38, "8P_MA_2021": 4.54, "8P_DE_2025": 4.92, "8P_DE_2024": 4.54, "8P_DE_2023": 5.04, "8P_DE_2022": 5.05, "8P_DE_2021": 4.77, "tr_4P": null, "tr_6P": null, "tr_8P": 85.4, "lat": 46.5251, "lng": 6.6391}, {"name": "Prilly", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.5, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.49, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.52, "8P_FR_2024": 4.46, "8P_FR_2023": 4.62, "8P_FR_2022": 4.43, "8P_FR_2021": 4.73, "8P_MA_2025": 4.34, "8P_MA_2024": 4.07, "8P_MA_2023": 4.37, "8P_MA_2022": 4.14, "8P_MA_2021": 4.76, "8P_DE_2025": 4.64, "8P_DE_2024": 4.09, "8P_DE_2023": 4.62, "8P_DE_2022": 4.84, "8P_DE_2021": 4.78, "tr_4P": null, "tr_6P": null, "tr_8P": 81.0, "lat": 46.5301, "lng": 6.5932}, {"name": "Rolle primaire et secondaire", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.63, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.59, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.5, "8P_FR_2024": 4.54, "8P_FR_2023": 4.39, "8P_FR_2022": 4.44, "8P_FR_2021": 4.46, "8P_MA_2025": 4.63, "8P_MA_2024": 4.73, "8P_MA_2023": 4.37, "8P_MA_2022": 4.59, "8P_MA_2021": 4.55, "8P_DE_2025": 4.77, "8P_DE_2024": 4.45, "8P_DE_2023": 4.7, "8P_DE_2022": 5.12, "8P_DE_2021": 4.68, "tr_4P": null, "tr_6P": null, "tr_8P": 86.2, "lat": 46.459, "lng": 6.3364}, {"name": "Vevey primaire et secondaire", "type": "7-11", "avg_4P_2025": null, "avg_6P_2025": null, "avg_8P_2025": 4.32, "avg_4P_2125": null, "avg_6P_2125": null, "avg_8P_2125": 4.41, "4P_FR_2025": null, "4P_FR_2024": null, "4P_FR_2023": null, "4P_FR_2022": null, "4P_FR_2021": null, "6P_FR_2025": null, "6P_FR_2024": null, "6P_FR_2023": null, "6P_FR_2022": null, "6P_FR_2021": null, "6P_MA_2025": null, "6P_MA_2024": null, "6P_MA_2023": null, "6P_MA_2022": null, "6P_MA_2021": null, "8P_FR_2025": 4.29, "8P_FR_2024": 4.49, "8P_FR_2023": 4.41, "8P_FR_2022": 4.43, "8P_FR_2021": 4.63, "8P_MA_2025": 4.08, "8P_MA_2024": 4.35, "8P_MA_2023": 3.89, "8P_MA_2022": 4.25, "8P_MA_2021": 4.23, "8P_DE_2025": 4.6, "8P_DE_2024": 4.27, "8P_DE_2023": 4.67, "8P_DE_2022": 4.88, "8P_DE_2021": 4.72, "tr_4P": null, "tr_6P": null, "tr_8P": 71.7, "lat": 46.4631, "lng": 6.845}];
+const CANTON_DATA = {"avg_4P_2025": 5.13, "avg_6P_2025": 4.93, "avg_8P_2025": 4.6, "avg_4P_2125": 5.04, "avg_6P_2125": 4.95, "avg_8P_2125": 4.57, "4P_FR_2025": 5.13, "4P_FR_2024": 5.1, "4P_FR_2023": 5.08, "4P_FR_2022": 4.91, "4P_FR_2021": 5.0, "6P_FR_2025": 4.95, "6P_FR_2024": 5.05, "6P_FR_2023": 4.91, "6P_FR_2022": 4.82, "6P_FR_2021": 5.05, "6P_MA_2025": 4.91, "6P_MA_2024": 4.81, "6P_MA_2023": 4.94, "6P_MA_2022": 4.92, "6P_MA_2021": 5.1, "8P_FR_2025": 4.58, "8P_FR_2024": 4.58, "8P_FR_2023": 4.53, "8P_FR_2022": 4.51, "8P_FR_2021": 4.66, "8P_MA_2025": 4.48, "8P_MA_2024": 4.46, "8P_MA_2023": 4.32, "8P_MA_2022": 4.4, "8P_MA_2021": 4.56, "8P_DE_2025": 4.76, "8P_DE_2024": 4.35, "8P_DE_2023": 4.73, "8P_DE_2022": 4.98, "8P_DE_2021": 4.74, "tr_4P": 92.4, "tr_6P": 94.4, "tr_8P": 83.9};
+
+// State
+let activeGrade = 'all';
+let activeSubject = 'avg';
+let activeYear = 'avg2125';
+let sidebarSubject = 'avg';   // sidebar subject filter: avg | FR | MA | DE
+let sidebarYear    = 'avg2125';  // sidebar year filter
+let selectedSchool = null;
+let searchQuery = '';
+let sortMode = 'score_desc';
+
+// Helpers
+function getSidebarScore(s, grade) {
+  // Returns the score for the given grade using sidebarSubject + sidebarYear
+  const yr = sidebarYear;
+  const subj = sidebarSubject;
+
+  function gradeSubjYr(g, subj, yr) {
+    if (subj === 'avg') {
+      // Average of all subjects for this grade/year
+      if (yr === '2025') {
+        const k = 'avg_' + g + '_2025'; return s[k] ?? null;
+      }
+      if (yr === 'avg2125') {
+        const k = 'avg_' + g + '_2125'; return s[k] ?? null;
+      }
+      const subjKeys = {
+        '4P': ['4P_FR_'+yr],
+        '6P': ['6P_FR_'+yr, '6P_MA_'+yr],
+        '8P': ['8P_FR_'+yr, '8P_MA_'+yr, '8P_DE_'+yr],
+      };
+      const keys = subjKeys[g] || [];
+      const vals = keys.map(k => s[k]).filter(v => v != null);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+    } else {
+      // Specific subject
+      if (subj === 'DE' && g !== '8P') return null; // Allemand only for 8P
+      if (subj === 'MA' && g === '4P') return null;  // Maths not in 4P
+      const key = g + '_' + subj + '_' + yr;
+      return s[key] ?? null;
+    }
+  }
+
+  if (grade === 'all') {
+    const grades = ['4P','6P','8P'];
+    const vals = grades.map(g => gradeSubjYr(g, subj, yr)).filter(v => v != null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  return gradeSubjYr(grade, subj, yr);
+}
+
+function getScore(s, grade) {
+  if (grade === '4P') return s.avg_4P_2025;
+  if (grade === '6P') return s.avg_6P_2025;
+  if (grade === '8P') return s.avg_8P_2025;
+  const vals = [s.avg_4P_2025, s.avg_6P_2025, s.avg_8P_2025].filter(v => v !== null);
+  return vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : null;
+}
+
+// Canton-relative color: green = above canton, red = below
+// Precompute sorted values per field for rank-based coloring
+const _rankCache = {};
+function _getSortedVals(key) {
+  if (!_rankCache[key]) {
+    _rankCache[key] = SCHOOLS_DATA.map(s => s[key]).filter(v => v != null).sort((a,b) => b - a);
+  }
+  return _rankCache[key];
+}
+
+// Returns 0.0 (worst) to 1.0 (best) percentile rank for a value in a column
+function getRankPct(score, key) {
+  if (score == null || !key) return null;
+  const sorted = _getSortedVals(key);
+  if (!sorted.length) return null;
+  // Find position (lower index = better rank)
+  let pos = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i] <= score) { pos = i; break; }
+    pos = i + 1;
+  }
+  return 1 - (pos / sorted.length); // 1.0 = top, 0.0 = bottom
+}
+
+// Color by rank percentile within the column
+// top 20% → green, 20-40% → light green, 40-60% → yellow, 60-80% → orange, bottom 20% → red
+function scoreColor(score, keyOrRef) {
+  if (score == null || !isFinite(score)) return '#7b82a0';
+
+  // If keyOrRef is a string → use rank-based coloring
+  if (typeof keyOrRef === 'string') {
+    const pct = getRankPct(score, keyOrRef);
+    if (pct == null) return '#7b82a0';
+    if (pct >= 0.80) return '#16a34a'; // top 20%
+    if (pct >= 0.60) return '#4ade80'; // top 40%
+    if (pct >= 0.40) return '#facc15'; // middle
+    if (pct >= 0.20) return '#fb923c'; // bottom 40%
+    return '#f87171';                  // bottom 20%
+  }
+
+  // If keyOrRef is a number (canton ref) → canton-relative coloring (legacy)
+  if (typeof keyOrRef === 'number') {
+    const diff = score - keyOrRef;
+    if (diff >= 0.3)  return '#16a34a';
+    if (diff >= 0.1)  return '#4ade80';
+    if (diff >= -0.05) return '#facc15';
+    if (diff >= -0.2) return '#fb923c';
+    return '#f87171';
+  }
+
+  return '#7b82a0';
+}
+
+function getRanked(grade) {
+  const withScore = SCHOOLS_DATA.map((s, i) => ({ ...s, _idx: i, score: getScore(s, grade) }))
+    .filter(s => s.score !== null);
+  withScore.sort((a, b) => b.score - a.score);
+  return withScore.map((s, rank) => ({ ...s, rank: rank + 1 }));
+}
+
+function getRank(school, grade) {
+  const ranked = getRanked(grade);
+  const found = ranked.find(r => r.name === school.name);
+  return found ? found.rank : null;
+}
+
+// Sidebar list
+function buildList() {
+  const list = document.getElementById('schoolsList');
+
+  // Build ranked list using sidebarSubject + sidebarYear
+  let ranked = SCHOOLS_DATA.map((s, i) => {
+    const score = computeScore(s, activeGrade, sidebarSubject, activeYear);
+    return { ...s, _idx: i, score };
+  }).filter(s => s.score !== null)
+    .sort((a,b) => b.score - a.score)
+    .map((s, i) => ({ ...s, rank: i+1 }));
+
+
+  // Filter by search
+  let filtered = ranked;
+  if (searchQuery) {
+    filtered = filtered.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }
+
+  // Sort
+  if (sortMode === 'score_asc') filtered.sort((a,b) => a.score - b.score);
+  else if (sortMode === 'name_asc') filtered.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sortMode === 'tr_desc') {
+    filtered.sort((a,b) => {
+      const ta = activeGrade === '4P' ? a.tr_4P : activeGrade === '6P' ? a.tr_6P : a.tr_8P;
+      const tb = activeGrade === '4P' ? b.tr_4P : activeGrade === '6P' ? b.tr_6P : b.tr_8P;
+      return (tb || 0) - (ta || 0);
+    });
+  }
+
+  list.innerHTML = filtered.map(s => {
+    const rankClass = s.rank === 1 ? 'rank-1' : s.rank === 2 ? 'rank-2' : s.rank === 3 ? 'rank-3' : 'rank-other';
+    // Determine field key for rank-based color in sidebar
+    const _sidebarKey = (() => {
+      const g = activeGrade === 'all' ? null : activeGrade;
+      const subj = sidebarSubject;
+      const yr = sidebarYear;
+      if (!g) return null;
+      if (subj === 'avg') {
+        if (yr === '2025') return 'avg_' + g + '_2025';
+        if (yr === 'avg2125') return 'avg_' + g + '_2125';
+        return null;
+      }
+      if (subj === 'DE' && g !== '8P') return null;
+      if (subj === 'MA' && g === '4P') return null;
+      if (yr === 'avg2125' || yr === null) return null;
+      return g + '_' + subj + '_' + yr;
+    })();
+    const color = scoreColorByFilter(s.score, activeGrade, sidebarSubject, sidebarYear);
+    const isSelected = selectedSchool && selectedSchool.name === s.name;
+    return `<div class="school-card ${isSelected ? 'selected' : ''}" onclick="selectSchool('${s.name.replace(/'/g, "\\'")}')">
+      <div class="school-info">
+        <div class="school-name">${s.name}${getMedal(s.name) ? ' <span style="font-size:0.82rem">' + getMedal(s.name) + '</span>' : ''}</div>
+        <div class="school-meta">${t('type_label')} ${s.type}</div>
+      </div>
+
+    </div>`;
+  }).join('');
+}
+
+// Ranking table
+// Global score/color helpers (used by map, ranking, sidebar)
+function computeScore(s, g, subj, yr) {
+  if (g === 'all') {
+    const vals = ['4P','6P','8P'].map(gr => computeScore(s, gr, subj, yr)).filter(v => v != null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  if (subj === 'avg') {
+    if (yr === '2025') return s['avg_'+g+'_2025'] ?? null;
+    if (yr === 'avg2125') return s['avg_'+g+'_2125'] ?? null;
+    const sk = {'4P':['4P_FR_'+yr],'6P':['6P_FR_'+yr,'6P_MA_'+yr],'8P':['8P_FR_'+yr,'8P_MA_'+yr,'8P_DE_'+yr]};
+    const vals = (sk[g]||[]).map(k=>s[k]).filter(v=>v!=null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  if (subj === 'DE' && g !== '8P') return null;
+  if (subj === 'MA' && g === '4P') return null;
+  if (yr === 'avg2125') {
+    const keys5 = {FR:[g+'_FR_2025',g+'_FR_2024',g+'_FR_2023',g+'_FR_2022',g+'_FR_2021'],
+                   MA:[g+'_MA_2025',g+'_MA_2024',g+'_MA_2023',g+'_MA_2022',g+'_MA_2021'],
+                   DE:['8P_DE_2025','8P_DE_2024','8P_DE_2023','8P_DE_2022','8P_DE_2021']};
+    const kk = keys5[subj]||[];
+    const vv = kk.map(k=>s[k]).filter(v=>v!=null);
+    return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+  }
+  return s[g+'_'+subj+'_'+yr] ?? null;
+}
+
+function computeCantonScore(g, subj, yr) {
+  return computeScore(CANTON_DATA, g, subj, yr);
+}
+
+// Rank percentile for a computed score among all schools
+function getRankPctComputed(score, g, subj, yr) {
+  if (score == null) return null;
+  const allVals = SCHOOLS_DATA.map(s => computeScore(s, g, subj, yr)).filter(v=>v!=null).sort((a,b)=>b-a);
+  if (!allVals.length) return null;
+  const pos = allVals.findIndex(v => v <= score + 0.001);
+  return 1 - (pos < 0 ? allVals.length : pos) / allVals.length;
+}
+
+// Color by rank among all schools for the current filter
+function scoreColorByFilter(score, g, subj, yr) {
+  if (score == null || !isFinite(score)) return '#7b82a0';
+  const pct = getRankPctComputed(score, g, subj, yr);
+  if (pct == null) return '#7b82a0';
+  if (pct >= 0.80) return '#16a34a';
+  if (pct >= 0.60) return '#4ade80';
+  if (pct >= 0.40) return '#facc15';
+  if (pct >= 0.20) return '#fb923c';
+  return '#f87171';
+}
+
+function getMedal(name) {
+  // Only show medals when grade=all and subject=avg
+  if (!(activeGrade === 'all' && sidebarSubject === 'avg')) return '';
+  const yr = activeYear;
+  function allGradesAvg(s, y) {
+    const grades = ['4P','6P','8P'];
+    const vals = grades.map(g => {
+      if (y==='2025') return s['avg_'+g+'_2025'] ?? null;
+      if (y==='avg2125') return s['avg_'+g+'_2125'] ?? null;
+      const sk={'4P':['4P_FR_'+y],'6P':['6P_FR_'+y,'6P_MA_'+y],'8P':['8P_FR_'+y,'8P_MA_'+y,'8P_DE_'+y]};
+      const vv=(sk[g]||[]).map(k=>s[k]).filter(v=>v!=null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    }).filter(v=>v!=null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  if (yr === 'avg2125') {
+    let gold=0,silver=0,bronze=0;
+    ['2021','2022','2023','2024','2025'].forEach(y => {
+      const scores = SCHOOLS_DATA.map(s=>({name:s.name,v:allGradesAvg(s,y)})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v);
+      if (scores[0]?.name===name) gold++;
+      else if (scores[1]?.name===name) silver++;
+      else if (scores[2]?.name===name) bronze++;
+    });
+    return '<span class="medal-gold">🥇</span>'.repeat(gold)+'🥈'.repeat(silver)+'🥉'.repeat(bronze);
+  } else {
+    const scores = SCHOOLS_DATA.map(s=>({name:s.name,v:allGradesAvg(s,yr)})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v);
+    if (scores[0]?.name===name) return '<span class="medal-gold">🥇</span>';
+    if (scores[1]?.name===name) return '🥈';
+    if (scores[2]?.name===name) return '🥉';
+    return '';
+  }
+}
+
+
+function buildRanking() {
+  const header = document.getElementById('rankingHeader');
+  const body   = document.getElementById('rankingBody');
+
+  const yr    = activeYear;
+  const grade = activeGrade;
+  const subj  = sidebarSubject;
+  const is2025 = yr === '2025';
+
+  const gradeLabel = grade === 'all' ? t('tout_subj') : grade;
+  const subjLabel  = subj === 'avg' ? t('tout_subj') : subj === 'FR' ? t('francais') : subj === 'MA' ? t('maths') : t('allemand');
+  const yrLabel    = yr === 'avg2125' ? t('moy_2125') : yr;
+  const colHead    = gradeLabel + ' · ' + subjLabel + ' · ' + yrLabel;
+  const showTR = is2025 && subj === 'avg';
+
+  function scoreForFilters(s, g, subj, yr) {
+    if (g === 'all') {
+      const vals = ['4P','6P','8P'].map(gr => scoreForFilters(s,gr,subj,yr)).filter(v=>v!=null);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+    }
+    if (subj === 'avg') {
+      if (yr === '2025') return s['avg_'+g+'_2025'] ?? null;
+      if (yr === 'avg2125') return s['avg_'+g+'_2125'] ?? null;
+      const sk = {'4P':['4P_FR_'+yr],'6P':['6P_FR_'+yr,'6P_MA_'+yr],'8P':['8P_FR_'+yr,'8P_MA_'+yr,'8P_DE_'+yr]};
+      const vals = (sk[g]||[]).map(k=>s[k]).filter(v=>v!=null);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+    }
+    if (subj === 'DE' && g !== '8P') return null;
+    if (subj === 'MA' && g === '4P') return null;
+    if (yr === 'avg2125') {
+      const k5 = {FR:[g+'_FR_2025',g+'_FR_2024',g+'_FR_2023',g+'_FR_2022',g+'_FR_2021'],MA:[g+'_MA_2025',g+'_MA_2024',g+'_MA_2023',g+'_MA_2022',g+'_MA_2021'],DE:['8P_DE_2025','8P_DE_2024','8P_DE_2023','8P_DE_2022','8P_DE_2021']};
+      const vv = (k5[subj]||[]).map(k=>s[k]).filter(v=>v!=null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    }
+    return s[g+'_'+subj+'_'+yr] ?? null;
+  }
+
+  function cantonScoreForFilters(g, subj, yr) {
+    return scoreForFilters(CANTON_DATA, g, subj, yr);
+  }
+
+  const cantonRef = cantonScoreForFilters(grade, subj, yr);
+
+  function cantonTR(g) {
+    if (g==='4P') return CANTON_DATA.tr_4P;
+    if (g==='6P') return CANTON_DATA.tr_6P;
+    if (g==='8P') return CANTON_DATA.tr_8P;
+    const vals=[CANTON_DATA.tr_4P,CANTON_DATA.tr_6P,CANTON_DATA.tr_8P].filter(v=>v!=null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  const cantonTRval = cantonTR(grade);
+
+  function schoolTR(s, g) {
+    if (g==='4P') return s.tr_4P;
+    if (g==='6P') return s.tr_6P;
+    if (g==='8P') return s.tr_8P;
+    const vals=[s.tr_4P,s.tr_6P,s.tr_8P].filter(v=>v!=null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+
+  // Medal: only when grade=all, subj=avg
+  const showMedal = (grade === 'all' && subj === 'avg');
+
+  let dataset = SCHOOLS_DATA
+    .map(s => ({...s, _score: scoreForFilters(s, grade, subj, yr)}))
+    .filter(s => s._score != null);
+
+  // Sort full dataset — ranks stay fixed regardless of search
+  dataset.sort((a,b) => b._score - a._score);
+  const sq = searchQuery.toLowerCase();
+
+  const gridCols = showTR ? '90px 1fr 120px 95px' : '90px 1fr 120px';
+  header.style.gridTemplateColumns = gridCols;
+  header.innerHTML = `
+    <div style="font-size:0.68rem">${t('col_rank')}</div>
+    <div>${t('col_etablissement')}</div>
+    <div style="text-align:center;white-space:nowrap">${colHead}</div>
+    ${showTR ? `<div style="text-align:center;white-space:nowrap">${t('col_taux')}</div>` : ''}`;
+
+  body.innerHTML = dataset.map((s, i) => {
+    const isSelected = selectedSchool && selectedSchool.name === s.name;
+    const isMatch = sq && s.name.toLowerCase().includes(sq);
+    const isDimmed = sq && !isMatch;
+    const v = s._score;
+    const col = scoreColorByFilter(v, grade, subj, yr);
+    const scoreStyle = 'background:'+col+'22;color:'+col+';font-weight:700';
+    const medal = getMedal(s.name);
+
+    const tr = showTR ? schoolTR(s, grade) : null;
+    const trCol = (() => {
+      if (tr == null) return null;
+      const allTR = SCHOOLS_DATA.map(s2 => {
+        const sc = computeScore(s2, grade, subj, yr);
+        return sc != null ? schoolTR(s2, grade) : null;
+      }).filter(v=>v!=null).sort((a,b)=>b-a);
+      if (!allTR.length) return '#7b82a0';
+      const pos = allTR.findIndex(v=>v<=tr+0.001);
+      const pct = 1-(pos<0?allTR.length:pos)/allTR.length;
+      if (pct>=0.80) return '#16a34a';
+      if (pct>=0.60) return '#4ade80';
+      if (pct>=0.40) return '#facc15';
+      if (pct>=0.20) return '#fb923c';
+      return '#f87171';
+    })();
+
+    const rowExtra = isDimmed ? 'opacity:0.2;' : isMatch ? 'background:var(--surface2);border-color:var(--accent);border-width:1.5px;' : '';
+    const rkStyle = isMatch ? 'color:#fff;background:var(--accent);border-radius:5px;padding:1px 5px;font-weight:700' : 'color:var(--accent);font-weight:700';
+
+    return `<div class="ranking-row ${isSelected ? 'selected' : ''}" style="grid-template-columns:${gridCols};${rowExtra}" onclick="selectSchool('${s.name.replace(/'/g, "\\'")}')">
+      <div class="rk" style="${rkStyle};font-size:0.75rem">${i+1}</div>
+      <div class="rname" style="${isMatch ? 'font-weight:700' : ''}">${s.name}${medal ? ' <span style="font-size:0.85rem">' + medal + '</span>' : ''}</div>
+      <div class="rscore" style="${scoreStyle}">${v.toFixed(2)}</div>
+      ${showTR ? `<div class="rscore" style="${tr!=null?'background:'+trCol+'22;color:'+trCol:'color:#bbb'}">${tr!=null?tr.toFixed(1)+'%':'—'}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Canton row (pinned above body)
+  const cantonV = cantonRef;
+  const cantonRowEl = document.getElementById('cantonRow');
+  cantonRowEl.innerHTML = `<div class="ranking-row canton-line" style="grid-template-columns:${gridCols}">
+    <div class="rk">—</div>
+    <div class="rname" style="color:var(--accent);font-weight:700">${t('canton_row')}</div>
+    <div class="rscore" style="color:var(--accent);font-weight:600">${cantonV!=null?cantonV.toFixed(2):'—'}</div>
+    ${showTR ? `<div class="rscore" style="color:var(--text-muted)">${cantonTRval!=null?cantonTRval.toFixed(1)+'%':'—'}</div>` : ''}
+  </div>`;
+
+  // Auto-scroll to first matched row when searching
+  if (sq) {
+    requestAnimationFrame(() => {
+      const firstMatch = body.querySelector('.ranking-row[style*="border-color:var(--accent)"]');
+      if (firstMatch) firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+}
+
+// Medal for detail panel — always based on Tout+Tout+Moy.21-25
+function getMedalForAvg2125(name) {
+  // Use exact same logic as getMedal (avg of grade averages, not flat subject avg)
+  function allGradesAvg(s, y) {
+    const grades = ['4P','6P','8P'];
+    const vals = grades.map(g => {
+      if (y==='2025') return s['avg_'+g+'_2025'] ?? null;
+      const sk={'4P':['4P_FR_'+y],'6P':['6P_FR_'+y,'6P_MA_'+y],'8P':['8P_FR_'+y,'8P_MA_'+y,'8P_DE_'+y]};
+      const vv=(sk[g]||[]).map(k=>s[k]).filter(v=>v!=null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    }).filter(v=>v!=null);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+  let gold=0, silver=0, bronze=0;
+  ['2021','2022','2023','2024','2025'].forEach(y => {
+    const scores = SCHOOLS_DATA.map(s=>({name:s.name,v:allGradesAvg(s,y)})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v);
+    if (scores[0]?.name===name) gold++;
+    else if (scores[1]?.name===name) silver++;
+    else if (scores[2]?.name===name) bronze++;
+  });
+  return '<span class="medal-gold">🥇</span>'.repeat(gold)+'🥈'.repeat(silver)+'🥉'.repeat(bronze);
+}
+
+// Detail panel
+function buildDetail(school) {
+  const el = document.getElementById('detailContent');
+
+  function sc(v, ref) { return scoreColor(v, ref); }
+  function fmt(v) { return v != null ? v.toFixed(2) : '—'; }
+  function fmtPct(v) { return v != null ? v.toFixed(1) + '%' : '—'; }
+
+  function getRankFor(key) {
+    const vals = SCHOOLS_DATA.map(s => s[key]).filter(v => v != null);
+    vals.sort((a,b) => b - a);
+    const myVal = school[key];
+    if (myVal == null) return null;
+    const rank = vals.indexOf(myVal) + 1;
+    return { rank, total: vals.length };
+  }
+
+  function getRankForAvg5(keys5) {
+    const allAvgs = SCHOOLS_DATA.map(s => {
+      const vv = keys5.map(k => s[k]).filter(v => v != null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    }).filter(v => v != null).sort((a,b) => b - a);
+    if (!allAvgs.length) return null;
+    const myVv = keys5.map(k => school[k]).filter(v => v != null);
+    const myAvg = myVv.length ? myVv.reduce((a,b)=>a+b,0)/myVv.length : null;
+    if (myAvg == null) return null;
+    let rank = 1;
+    for (let i = 0; i < allAvgs.length; i++) {
+      if (allAvgs[i] <= myAvg + 0.001) { rank = i + 1; break; }
+      rank = i + 2;
+    }
+    return { rank, total: allAvgs.length };
+  }
+
+  function getRankForGradeYear(g, yr) {
+    const subjKeysByYr = {
+      '4P': yr => ['4P_FR_' + yr],
+      '6P': yr => ['6P_FR_' + yr, '6P_MA_' + yr],
+      '8P': yr => ['8P_FR_' + yr, '8P_MA_' + yr, '8P_DE_' + yr],
+    };
+    if (yr === '2025') return getRankFor('avg_' + g + '_2025');
+    const keys = (subjKeysByYr[g] || (() => []))(yr);
+    if (!keys.length) return null;
+    const allVals = SCHOOLS_DATA.map(s => {
+      const vv = keys.map(k => s[k]).filter(v => v != null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    }).filter(v => v != null).sort((a,b) => b - a);
+    const myVv = keys.map(k => school[k]).filter(v => v != null);
+    const myVal = myVv.length ? myVv.reduce((a,b)=>a+b,0)/myVv.length : null;
+    if (myVal == null) return null;
+    const rank = allVals.findIndex(x => x <= myVal + 0.001) + 1;
+    return { rank: rank || allVals.length, total: allVals.length };
+  }
+
+  function scAvg5(val, keys5) {
+    if (val == null) return '#7b82a0';
+    const allAvgs = SCHOOLS_DATA.map(s => {
+      const vv = keys5.map(k => s[k]).filter(v => v != null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    }).filter(v => v != null).sort((a,b) => b - a);
+    if (!allAvgs.length) return '#7b82a0';
+    const pos = allAvgs.findIndex(x => x <= val + 0.001);
+    const pct = 1 - (pos < 0 ? allAvgs.length : pos) / allAvgs.length;
+    if (pct >= 0.80) return '#16a34a';
+    if (pct >= 0.60) return '#4ade80';
+    if (pct >= 0.40) return '#facc15';
+    if (pct >= 0.20) return '#fb923c';
+    return '#f87171';
+  }
+
+  function sparkline(vals, keys) {
+    const filtered = vals.filter(v => v != null);
+    if (!filtered.length) return '';
+    const mn = Math.min(...filtered), mx = Math.max(...filtered);
+    const range = mx - mn || 0.3;
+    return '<div style="display:flex;gap:4px;align-items:flex-end;margin-top:10px">' +
+      vals.map((v, i) => {
+        const yr = [2025,2024,2023,2022,2021][i];
+        const key = keys ? keys[i] : null;
+        if (v == null) return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="font-size:0.6rem;color:#bbb">—</div>
+          <div style="width:100%;height:6px;background:var(--border);border-radius:3px"></div>
+          <div style="font-size:0.57rem;color:#bbb">${yr}</div>
+        </div>`;
+        const pct = Math.max(20, ((v - mn) / range) * 85 + 15);
+        const col = key ? sc(v, key) : '#7b82a0';
+        const barH = Math.round(pct * 0.28 + 4);
+        const rkI = key ? getRankFor(key) : null;
+        const rkBadge = rkI ? `<div style="font-size:0.57rem;color:var(--accent);font-weight:700">#${rkI.rank}</div>` : '';
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="font-size:0.68rem;font-weight:700;color:${col}">${v.toFixed(2)}</div>
+          <div style="width:100%;height:${barH}px;min-height:4px;background:${col};border-radius:3px;opacity:0.75"></div>
+          ${rkBadge}
+          <div style="font-size:0.57rem;color:var(--text-muted)">${yr}</div>
+        </div>`;
+      }).join('') + '</div>';
+  }
+
+  function subjBlock(gradeLabel, subjLabel, keys5, cantonKey) {
+    const v2025 = school[keys5[0]];
+    const v2024 = school[keys5[1]];
+    const v2023 = school[keys5[2]];
+    const v2022 = school[keys5[3]];
+    const v2021 = school[keys5[4]];
+    const avg5 = (() => { const vv=[v2025,v2024,v2023,v2022,v2021].filter(x=>x!=null); return vv.length?vv.reduce((a,b)=>a+b,0)/vv.length:null; })();
+    const cRef = CANTON_DATA[keys5[0]];
+    const colAvg = scAvg5(avg5, keys5);
+    const rkAvg = getRankForAvg5(keys5);
+    if (v2025 == null && avg5 == null) return '';
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;border-left:3px solid ${colAvg}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em">${gradeLabel} · ${subjLabel}</div>
+          <div style="font-size:1.5rem;font-family:'DM Serif Display',serif;color:${colAvg};line-height:1.2;margin-top:2px">${fmt(avg5)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${t('moy_canton')} ${fmt(cRef)}</div>
+        </div>
+        <div style="text-align:right">
+          ${rkAvg ? `<div style="font-size:1.4rem;font-family:'DM Serif Display',serif;color:var(--accent)">#${rkAvg.rank}</div><div style="font-size:0.68rem;color:var(--text-muted)">/ ${rkAvg.total} ${t('ecoles')}</div>` : ''}
+        </div>
+      </div>
+      ${sparkline([v2025,v2024,v2023,v2022,v2021], keys5)}
+    </div>`;
+  }
+
+  function gradeAvgBlock(gradeLabel, avgKey, avg2125Key, trKey) {
+    const yrs = ['2025','2024','2023','2022','2021'];
+    const subjKeysByYr = {
+      '4P': yr => ['4P_FR_'+yr],
+      '6P': yr => ['6P_FR_'+yr,'6P_MA_'+yr],
+      '8P': yr => ['8P_FR_'+yr,'8P_MA_'+yr,'8P_DE_'+yr],
+    };
+    const g = gradeLabel;
+    const gradeYrVals = yrs.map(yr => {
+      if (yr === '2025') return school[avgKey] ?? null;
+      const keys = (subjKeysByYr[g]||(() => []))(yr);
+      const vv = keys.map(k=>school[k]).filter(v=>v!=null);
+      return vv.length ? vv.reduce((a,b)=>a+b,0)/vv.length : null;
+    });
+    const avg5 = school[avg2125Key];
+    const cv = CANTON_DATA[avgKey];
+    const tr = school[trKey];
+    const colV = sc(school[avgKey], avgKey);
+    const rkAvg5 = (() => {
+      const avg5Keys = ['2025','2024','2023','2022','2021'].flatMap(yr => {
+        if (yr === '2025') return [avgKey];
+        return (subjKeysByYr[g]||(() => []))(yr);
+      });
+      return getRankForAvg5(avg5Keys.slice(0,5));
+    })();
+    if (school[avgKey] == null && avg5 == null) return '';
+    const sparkHtml = (() => {
+      const vals = gradeYrVals;
+      const filtered = vals.filter(v=>v!=null);
+      if (!filtered.length) return '';
+      const mn = Math.min(...filtered), mx = Math.max(...filtered);
+      const range = mx - mn || 0.3;
+      return '<div style="display:flex;gap:4px;align-items:flex-end;margin-top:10px">' +
+        vals.map((v,i) => {
+          const yr = yrs[i];
+          const key = yr === '2025' ? avgKey : null;
+          if (v==null) return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:0.6rem;color:#bbb">—</div><div style="width:100%;height:6px;background:var(--border);border-radius:3px"></div><div style="font-size:0.57rem;color:#bbb">${yr}</div></div>`;
+          const pct = Math.max(20, ((v-mn)/range)*85+15);
+          const col = key ? sc(v,key) : (() => {
+            const sk=(subjKeysByYr[g]||(() => []))(yr);
+            return sk.length ? sc(v,sk[0]) : '#7b82a0';
+          })();
+          const barH = Math.round(pct*0.28+4);
+          const rkI = getRankForGradeYear(g, yr);
+          const rkBadge = rkI ? `<div style="font-size:0.57rem;color:var(--accent);font-weight:700">#${rkI.rank}</div>` : '';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+            <div style="font-size:0.68rem;font-weight:700;color:${col}">${v.toFixed(2)}</div>
+            <div style="width:100%;height:${barH}px;min-height:4px;background:${col};border-radius:3px;opacity:0.75"></div>
+            ${rkBadge}
+            <div style="font-size:0.57rem;color:var(--text-muted)">${yr}</div>
+          </div>`;
+        }).join('') + '</div>';
+    })();
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;border-left:3px solid ${colV}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em">${gradeLabel} · ${t('moy_generale')}</div>
+          <div style="font-size:1.5rem;font-family:'DM Serif Display',serif;color:${colV};line-height:1.2;margin-top:2px">${fmt(avg5)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${t('moy_canton')} ${fmt(cv)}</div>
+        </div>
+        <div style="text-align:right">
+          ${rkAvg5 ? `<div style="font-size:1.4rem;font-family:'DM Serif Display',serif;color:var(--accent)">#${rkAvg5.rank}</div><div style="font-size:0.68rem;color:var(--text-muted)">/ ${rkAvg5.total} ${t('ecoles')}</div>` : ''}
+        </div>
+      </div>
+      ${sparkHtml}
+    </div>`;
+  }
+
+  function gradeCard(grade, avgKey, avg2125Key, trKey) {
+    const v = school[avgKey];
+    const avg = school[avg2125Key];
+    const tr = school[trKey];
+    const cv = CANTON_DATA[avgKey];
+    const col = sc(v, avgKey);
+    const rkInfo = getRankFor(avgKey);
+    if (v == null) return '';
+    return `<div style="background:var(--surface2);border:1px solid ${col}40;border-radius:10px;padding:14px;text-align:center">
+      <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">${grade}</div>
+      <div style="font-size:2rem;font-family:'DM Serif Display',serif;color:${col};line-height:1">${fmt(v)}</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">${t('moy_canton')} ${fmt(cv)}</div>
+      ${rkInfo ? `<div style="margin-top:6px;font-size:0.78rem;color:var(--accent);font-weight:700">#${rkInfo.rank} / ${rkInfo.total}</div>` : ''}
+      ${tr != null ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:0.68rem;color:var(--text-muted)">${t('taux_reussite')}</div>
+        <div style="font-size:0.9rem;font-weight:700;color:${sc(tr, trKey)}">${fmtPct(tr)}</div>
+      </div>` : ''}
+    </div>`;
+  }
+
+  const subjects4P = subjBlock('4P', t('francais'), ['4P_FR_2025','4P_FR_2024','4P_FR_2023','4P_FR_2022','4P_FR_2021'], '4P_FR_2025');
+  const subjects6P_FR = subjBlock('6P', t('francais'), ['6P_FR_2025','6P_FR_2024','6P_FR_2023','6P_FR_2022','6P_FR_2021'], '6P_FR_2025');
+  const subjects6P_MA = subjBlock('6P', t('maths'), ['6P_MA_2025','6P_MA_2024','6P_MA_2023','6P_MA_2022','6P_MA_2021'], '6P_MA_2025');
+  const subjects8P_FR = subjBlock('8P', t('francais'), ['8P_FR_2025','8P_FR_2024','8P_FR_2023','8P_FR_2022','8P_FR_2021'], '8P_FR_2025');
+  const subjects8P_MA = subjBlock('8P', t('maths'), ['8P_MA_2025','8P_MA_2024','8P_MA_2023','8P_MA_2022','8P_MA_2021'], '8P_MA_2025');
+  const subjects8P_DE = subjBlock('8P', t('allemand'), ['8P_DE_2025','8P_DE_2024','8P_DE_2023','8P_DE_2022','8P_DE_2021'], '8P_DE_2025');
+  const subjectBlocks = [subjects4P,subjects6P_FR,subjects6P_MA,subjects8P_FR,subjects8P_MA,subjects8P_DE].filter(Boolean).join('');
+
+  el.innerHTML = `
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'DM Serif Display',serif;font-size:1.5rem;color:var(--text);line-height:1.2;display:flex;align-items:center;gap:8px">
+        <span>${school.name}</span>
+        ${(() => { const m = getMedalForAvg2125(school.name); return m ? `<span style="font-size:1.1rem">${m}</span>` : ''; })()}
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.08em">${t('type_label')} ${school.type} · ${t('canton_vaud')}</div>
+    </div>
+    <div style="padding:20px 24px;overflow-y:auto">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:10px">${t('detail_annee_title')}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+        ${gradeCard('4P','avg_4P_2025','avg_4P_2125','tr_4P')}
+        ${gradeCard('6P','avg_6P_2025','avg_6P_2125','tr_6P')}
+        ${gradeCard('8P','avg_8P_2025','avg_8P_2125','tr_8P')}
+      </div>
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:10px">${t('detail_annee_detail')}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+        ${gradeAvgBlock('4P','avg_4P_2025','avg_4P_2125','tr_4P')}
+        ${gradeAvgBlock('6P','avg_6P_2025','avg_6P_2125','tr_6P')}
+        ${gradeAvgBlock('8P','avg_8P_2025','avg_8P_2125','tr_8P')}
+      </div>
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:10px">${t('detail_matiere_title')}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${subjectBlocks || '<div style="color:var(--text-muted);font-size:0.85rem">Aucune donnée disponible.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+// Select school
+function selectSchool(name) {
+  selectedSchool = SCHOOLS_DATA.find(s => s.name === name);
+  buildList();
+  buildRanking();
+  if (selectedSchool) {
+    buildDetail(selectedSchool);
+    // Switch to detail tab
+    switchTab('detailPanel');
+    // Pan map
+    if (map && selectedSchool.lat) {
+      map.setView([selectedSchool.lat, selectedSchool.lng], 13);
+    }
+  }
+}
+
+function scrollToSelected() {
+  requestAnimationFrame(() => {
+    const body = document.getElementById('rankingBody');
+    if (!body) return;
+    const selected = body.querySelector('.ranking-row.selected');
+    if (selected) selected.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+// Map — Leaflet with OSM tiles
+let map = null;
+let mapMarkers = [];
+
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([46.57, 6.53], 9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18
+  }).addTo(map);
+  updateMapMarkers();
+}
+
+function updateMapMarkers() {
+  if (!map) return;
+  mapMarkers.forEach(m => map.removeLayer(m));
+  mapMarkers = [];
+
+  const allScores = SCHOOLS_DATA
+    .map(s => computeScore(s, activeGrade, sidebarSubject, activeYear))
+    .filter(v => v != null)
+    .sort((a, b) => b - a);
+
+  SCHOOLS_DATA.forEach(s => {
+    if (!s.lat || !s.lng) return;
+    const score = computeScore(s, activeGrade, sidebarSubject, activeYear);
+    if (score == null) return;
+    const col = scoreColorByFilter(score, activeGrade, sidebarSubject, activeYear);
+    const rank = allScores.findIndex(v => Math.abs(v - score) < 0.001) + 1;
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${col};border:2.5px solid white;box-shadow:0 1px 5px rgba(0,0,0,0.35);cursor:pointer"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -10]
+    });
+
+    const marker = L.marker([s.lat, s.lng], { icon });
+    marker.bindPopup(`
+      <div style="font-family:'DM Sans',sans-serif;min-width:170px">
+        <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px;color:#1a1d2e">${s.name}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span style="font-size:1.15rem;font-weight:700;color:${col}">${score.toFixed(2)}</span>
+          ${rank ? `<span style="font-size:0.75rem;color:#4f46e5;font-weight:600">#${rank} / ${allScores.length}</span>` : ''}
+        </div>
+        <div style="font-size:0.72rem;color:#7b82a0">Type ${s.type}</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e5f0">
+          <a href="#" onclick="event.preventDefault();selectSchool('${s.name.replace(/'/g, "\\'")}');"
+             style="font-size:0.75rem;color:#4f46e5;text-decoration:none;font-weight:500">Voir le détail →</a>
+        </div>
+      </div>
+    `);
+
+    marker.addTo(map);
+    mapMarkers.push(marker);
+  });
+}
+
+function resetMapView() {
+  if (map) map.setView([46.57, 6.53], 9);
+}
+
+// Tabs
+let mapInitialized = false;
+function switchTab(panelId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
+  const panel = document.getElementById(panelId);
+  if (panel) { panel.style.display = 'flex'; panel.classList.add('active'); }
+  document.querySelector(`[data-panel="${panelId}"]`)?.classList.add('active');
+  if (panelId === 'mapPanel') {
+    if (!mapInitialized) {
+      mapInitialized = true;
+      setTimeout(() => { initMap(); }, 50);
+    } else {
+      setTimeout(() => map && map.invalidateSize(), 100);
+    }
+  }
+}
+
+// Init
+document.querySelectorAll('[data-grade]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-grade]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeGrade = btn.dataset.grade;
+    // Re-sync activeSubject to match grade + sidebarSubject
+    const g = activeGrade === 'all' ? '8P' : activeGrade;
+    if (sidebarSubject === 'avg') activeSubject = 'avg';
+    else if (sidebarSubject === 'FR') activeSubject = g + '_FR';
+    else if (sidebarSubject === 'MA') activeSubject = (g === '4P' ? '6P' : g) + '_MA';
+    else if (sidebarSubject === 'DE') activeSubject = '8P_DE';
+    buildList();
+    buildRanking();
+    updateMapMarkers();
+  });
+});
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.panel));
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.style.display = searchQuery ? 'flex' : 'none';
+  buildList();
+  buildRanking();
+});
+
+
+
+
+
+
+document.querySelectorAll('[data-sidebar-subj]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sidebar-subj]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sidebarSubject = btn.dataset.sidebarSubj;
+    // Map sidebar subject → ranking activeSubject
+    const gradeForSubj = activeGrade === 'all' ? '8P' : activeGrade;
+    if (sidebarSubject === 'avg') activeSubject = 'avg';
+    else if (sidebarSubject === 'FR') activeSubject = gradeForSubj + '_FR';
+    else if (sidebarSubject === 'MA') activeSubject = (gradeForSubj === '4P' ? '6P' : gradeForSubj) + '_MA';
+    else if (sidebarSubject === 'DE') activeSubject = '8P_DE';
+    buildList();
+    buildRanking();
+    updateMapMarkers();
+  });
+});
+
+document.querySelectorAll('[data-sidebar-yr]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sidebar-yr]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sidebarYear = btn.dataset.sidebarYr;
+    activeYear = sidebarYear; // sync ranking year bar
+    buildList();
+    buildRanking();
+    updateMapMarkers();
+  });
+});
+
+
+// ── i18n ─────────────────────────────────────────────────────────────────
+let currentLang = 'fr';
+const T = {"title": {"fr": "ECR Vaud · Épreuves Cantonales de Référence", "en": "ECR Vaud · Cantonal Reference Exams"}, "subtitle1": {"fr": "80 établissements · 2021–2025 · Canton de Vaud", "en": "80 schools · 2021–2025 · Canton of Vaud"}, "subtitle2": {"fr": "Notes moyennes par établissement aux ECR de français, mathématiques et allemand (4P, 6P, 8P) entre 2021 et 2025.", "en": "Average scores per school for ECR in French, mathematics and German (4P, 6P, 8P) between 2021 and 2025."}, "source": {"fr": "Source :", "en": "Source:"}, "guide": {"fr": "❓ Guide", "en": "❓ Guide"}, "search_placeholder": {"fr": "Rechercher un établissement...", "en": "Search for a school..."}, "annee_scolaire": {"fr": "ANNÉE SCOLAIRE", "en": "SCHOOL YEAR"}, "matiere": {"fr": "MATIÈRE", "en": "SUBJECT"}, "annee": {"fr": "ANNÉE", "en": "YEAR"}, "tout_subj": {"fr": "Tout", "en": "All"}, "francais": {"fr": "Français", "en": "French"}, "maths": {"fr": "Maths", "en": "Maths"}, "allemand": {"fr": "Allemand", "en": "German"}, "moy_2125": {"fr": "Moy. 21-25", "en": "Avg. 21-25"}, "tab_classement": {"fr": "📊 Classement", "en": "📊 Rankings"}, "tab_detail": {"fr": "📋 Détail", "en": "📋 Detail"}, "tab_carte": {"fr": "🗺 Carte", "en": "🗺 Map"}, "col_etablissement": {"fr": "Établissement", "en": "School"}, "col_rank": {"fr": "Classement", "en": "Ranking"}, "col_taux": {"fr": "Taux réussite", "en": "Pass rate"}, "canton_row": {"fr": "🏛 Canton", "en": "🏛 Canton (avg)"}, "reset_map": {"fr": "↺ Réinitialiser", "en": "↺ Reset"}, "map_hint": {"fr": "Cliquez sur un point pour voir le détail · Scroll pour zoomer", "en": "Click a point for details · Scroll to zoom"}, "detail_placeholder": {"fr": "Sélectionnez un établissement dans la liste pour voir ses résultats détaillés.", "en": "Select a school from the list to view its detailed results."}, "detail_annee_title": {"fr": "Résultats 2025 par année", "en": "2025 Results by Year"}, "detail_annee_detail": {"fr": "Détail par année · 2021–2025", "en": "Year Detail · 2021–2025"}, "detail_matiere_title": {"fr": "Détail par matière · 2021–2025", "en": "Subject Detail · 2021–2025"}, "moy_canton": {"fr": "Moy. Canton :", "en": "Canton avg:"}, "taux_reussite": {"fr": "Taux réussite", "en": "Pass rate"}, "ecoles": {"fr": "écoles", "en": "schools"}, "moy_generale": {"fr": "Moyenne générale", "en": "Overall average"}, "voir_detail": {"fr": "${t('voir_detail')}", "en": "View detail →"}, "type_label": {"fr": "Type", "en": "Type"}, "canton_vaud": {"fr": "Canton de Vaud", "en": "Canton of Vaud"}, "guide_title": {"fr": "Guide d'utilisation", "en": "User Guide"}, "guide_subtitle": {"fr": "ECR Vaud · Tableau de bord des résultats", "en": "ECR Vaud · Results Dashboard"}, "guide_s1_title": {"fr": "① Filtres (colonne gauche)", "en": "① Filters (left column)"}, "guide_s2_title": {"fr": "② Classement", "en": "② Rankings"}, "guide_s3_title": {"fr": "③ Détail", "en": "③ Detail"}, "guide_s4_title": {"fr": "④ Carte", "en": "④ Map"}, "guide_s5_title": {"fr": "⑤ Code couleur des scores", "en": "⑤ Score color code"}, "top20": {"fr": "Top 20%", "en": "Top 20%"}, "top40": {"fr": "Top 40%", "en": "Top 40%"}, "median": {"fr": "Médian", "en": "Median"}, "bas40": {"fr": "Bas 40%", "en": "Bottom 40%"}, "bas20": {"fr": "Bas 20%", "en": "Bottom 20%"}, "header_subtitle2": {"fr": "Notes moyennes par établissement aux ECR de français, mathématiques et allemand (4P, 6P, 8P) entre 2021 et 2025. Source :", "en": "Average scores per school in French, mathematics and German ECR (4P, 6P, 8P) from 2021 to 2025. Source:"}, "guide_body1": {"fr": "<b>Recherche</b> — Saisissez le nom d'un établissement pour le retrouver dans la liste. Un bouton <b>✕</b> permet d'effacer la recherche en un clic. Dans le Classement, les établissements correspondants sont mis en évidence (rang fixe). Cliquez sur le <b>titre</b> pour réinitialiser tous les filtres.<br><b>Année scolaire</b> — Filtrez par degré : <b>4P</b>, <b>6P</b>, <b>8P</b> ou <b>Tout</b> (moyenne de tous les degrés disponibles).<br><b>Matière</b> — Choisissez entre Français, Maths, Allemand ou la moyenne générale (<b>Tout</b>). Notez que les maths et l'allemand ne sont pas disponibles pour tous les degrés.<br><b>Année</b> — Sélectionnez une année de 2021 à 2025, ou la moyenne sur 5 ans (<b>Moy. 21–25</b>).<br><br>Les trois filtres agissent simultanément sur la liste, le Classement et la Carte.", "en": "<b>Search</b> — Type a school name to find it in the list. A <b>✕</b> button clears the search in one click. In Rankings, matching schools are highlighted (ranks stay fixed). Click the <b>title</b> to reset all filters.<br><b>School year</b> — Filter by grade: <b>4P</b>, <b>6P</b>, <b>8P</b> or <b>All</b> (average across all available grades).<br><b>Subject</b> — Choose French, Maths, German or overall average (<b>All</b>). Note that maths and German are not available for all grades.<br><b>Year</b> — Select a year from 2021 to 2025, or the 5-year average (<b>Avg. 21–25</b>).<br><br>All three filters update the list, Rankings and Map simultaneously."}, "guide_body2": {"fr": "Affiche le classement de tous les établissements selon les filtres actifs. La <b>colonne de score</b> correspond à la combinaison degré + matière + année.<br>La colonne <b>Taux de réussite</b> n'apparaît que lorsque l'année 2025 et la matière <b>Tout</b> sont sélectionnées.<br>La ligne <b>Canton</b> (en haut, fixe) indique la moyenne cantonale de référence.<br>La <b>recherche</b> met en évidence les établissements correspondants sans modifier les rangs — le rang reste fixe.<br>Lorsque les filtres <b>Tout + Tout</b> sont actifs, des médailles 🥇🥈🥉 apparaissent à côté des établissements ayant été classés 1er, 2e ou 3e lors d'une ou plusieurs années.", "en": "Shows the ranking of all schools based on active filters. The <b>score column</b> corresponds to the selected grade + subject + year combination.<br>The <b>Pass rate</b> column only appears when year 2025 and subject <b>All</b> are selected.<br>The <b>Canton</b> row (pinned at top) shows the cantonal reference average.<br><b>Search</b> highlights matching schools without changing ranks — ranks stay fixed.<br>When filters <b>All + All</b> are active, medals 🥇🥈🥉 appear next to schools that ranked 1st, 2nd or 3rd in one or more years."}, "guide_body3": {"fr": "Cliquez sur un établissement dans la liste ou le Classement pour afficher sa fiche détaillée. Le nom de l'école affiche ses médailles 🥇🥈🥉 basées sur la moyenne 2021–2025.<br><b>Résultats 2025 par année</b> — Note 2025, rang et taux de réussite pour chaque degré (4P, 6P, 8P).<br><b>Détail par année 2021–2025</b> — Pour chaque degré : moyenne sur 5 ans, rang, et graphique avec score et rang par année.<br><b>Détail par matière 2021–2025</b> — Même présentation par matière (français, maths, allemand) : moyenne 5 ans, rang, graphique annuel.", "en": "Click on a school in the list or Rankings to view its detailed profile. The school name displays its medals 🥇🥈🥉 based on the 2021–2025 average.<br><b>2025 Results by Year</b> — 2025 score, rank and pass rate for each grade (4P, 6P, 8P).<br><b>Year Detail 2021–2025</b> — For each grade: 5-year average, rank, and chart with score and rank per year.<br><b>Subject Detail 2021–2025</b> — Same layout per subject (French, maths, German): 5-year average, rank, annual chart."}, "guide_body4": {"fr": "Visualise les 80 établissements sur la carte du canton de Vaud (OpenStreetMap). Chaque point indique le score de l'établissement selon les filtres actifs, avec le même code couleur que le Classement. Les établissements sans données pour le filtre actif sont masqués. Cliquez sur un point pour afficher le score, le rang, et accéder à la fiche détaillée.", "en": "Displays all 80 schools on a map of the Canton of Vaud (OpenStreetMap). Each dot shows the school's score based on active filters, using the same color code as Rankings. Schools with no data for the active filter are hidden. Click a dot to see the score, rank, and open the school's detail profile."}, "guide_body5": {"fr": "Les couleurs reflètent le <b>rang relatif</b> de chaque score parmi tous les établissements affichés, répartis en 5 groupes de 20% :", "en": "Colors reflect the <b>relative rank</b> of each score among all displayed schools, divided into 5 equal groups of 20%:"}};
+
+function t(key) {
+  return T[key] ? T[key][currentLang] : key;
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'fr' ? 'en' : 'fr';
+  const btn = document.getElementById('langToggle');
+  btn.innerHTML = currentLang === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR';
+  applyTranslations();
+}
+
+function applyTranslations() {
+  const L = currentLang;
+  // Header
+  document.querySelector('h1').textContent = t('title');
+  const ps = document.querySelectorAll('header p');
+  if (ps[0]) ps[0].textContent = t('subtitle1');
+
+  // Search placeholder
+  const si = document.getElementById('searchInput');
+  if (si) si.placeholder = t('search_placeholder');
+
+  // Filter section labels
+  document.querySelectorAll('.filter-section-label').forEach((el, i) => {
+    const labels = [t('annee_scolaire'), t('matiere'), t('annee')];
+    if (labels[i]) el.textContent = labels[i];
+  });
+
+  // Subject buttons
+  document.querySelector('[data-sidebar-subj="avg"]').textContent = t('tout_subj');
+  document.querySelector('[data-sidebar-subj="FR"]').textContent = t('francais');
+  document.querySelector('[data-sidebar-subj="MA"]').textContent = t('maths');
+  document.querySelector('[data-sidebar-subj="DE"]').textContent = t('allemand');
+
+  // Year avg button
+  const avgBtn = document.querySelector('[data-sidebar-yr="avg2125"]');
+  if (avgBtn) avgBtn.textContent = t('moy_2125');
+
+  // Tabs
+  document.querySelector('[data-panel="rankingPanel"]').innerHTML = t('tab_classement');
+  document.querySelector('[data-panel="detailPanel"]').innerHTML = t('tab_detail');
+  document.querySelector('[data-panel="mapPanel"]').innerHTML = t('tab_carte');
+
+  // Ranking header (rebuild)
+  buildRanking();
+  buildList();
+
+  // Detail placeholder
+  const ph = document.querySelector('[data-i18n-placeholder]');
+  if (ph) ph.textContent = t('detail_placeholder');
+
+  // Re-render detail if school selected
+  if (selectedSchool) buildDetail(selectedSchool);
+
+  // Guide modal
+  document.querySelector('#helpModal .guide-title') && (document.querySelector('#helpModal .guide-title').textContent = t('guide_title'));
+
+  // Guide modal subtitle
+  const gs = document.getElementById('guideSubtitle');
+  if (gs) gs.textContent = t('guide_subtitle');
+
+  // Guide modal section titles
+  const guideTitles = document.querySelectorAll('.guide-section-title');
+  const gTitles = ['guide_s1_title','guide_s2_title','guide_s3_title','guide_s4_title','guide_s5_title'];
+  guideTitles.forEach((el, i) => { if (gTitles[i]) el.textContent = t(gTitles[i]); });
+
+  // Header subtitle2
+  const sub2 = document.getElementById('headerSubtitle2');
+  if (sub2) sub2.innerHTML = t('header_subtitle2') + ' <a href="https://www.vd.ch/index.php?id=2020663#c2085751" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:500">État de Vaud – DEF</a>';
+
+  // Guide body texts
+  const guideBodyMap = {
+    'guide-body-1': 'guide_body1', 'guide-body-2': 'guide_body2',
+    'guide-body-3': 'guide_body3', 'guide-body-4': 'guide_body4',
+  };
+  Object.entries(guideBodyMap).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = t(key);
+  });
+  const el5 = document.getElementById('guide-body-5');
+  if (el5) el5.innerHTML = t('guide_body5') + `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#16a34a;display:inline-block"></span><b>${t('top20')}</b></span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#4ade80;display:inline-block"></span><b>${t('top40')}</b></span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#facc15;display:inline-block"></span><b>${t('median')}</b></span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#fb923c;display:inline-block"></span><b>${t('bas40')}</b></span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#f87171;display:inline-block"></span><b>${t('bas20')}</b></span>
+    </div>`;
+}
+
+function clearSearch() {
+  searchQuery = '';
+  const inp = document.getElementById('searchInput');
+  if (inp) inp.value = '';
+  const btn = document.getElementById('searchClear');
+  if (btn) btn.style.display = 'none';
+  if (inp) inp.focus();
+  buildList();
+  buildRanking();
+}
+
+// Reset all filters to default
+function resetFilters() {
+  // Reset state
+  activeGrade = 'all';
+  sidebarSubject = 'avg';
+  sidebarYear = 'avg2125';
+  activeYear = 'avg2125';
+  activeSubject = 'avg';
+  searchQuery = '';
+  selectedSchool = null;
+
+  // Reset grade buttons
+  document.querySelectorAll('[data-grade]').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-grade="all"]').classList.add('active');
+
+  // Reset subject buttons
+  document.querySelectorAll('[data-sidebar-subj]').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-sidebar-subj="avg"]').classList.add('active');
+
+  // Reset year buttons
+  document.querySelectorAll('[data-sidebar-yr]').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-sidebar-yr="avg2125"]').classList.add('active');
+
+  // Reset search
+  document.getElementById('searchInput').value = '';
+
+  // Rebuild
+  buildList();
+  buildRanking();
+  updateMapMarkers();
+  switchTab('rankingPanel');
+}
+
+// Boot
+buildList();
+buildRanking();
+switchTab('rankingPanel');
+
+// Visitor counter
+async function initVisitorCounter() {
+  try {
+    // Increment on each visit
+    const res = await fetch('https://api.countapi.xyz/hit/ecr-vaud-dashboard/visits');
+    const data = await res.json();
+    const el = document.getElementById('visitorCount');
+    if (el && data.value) {
+      el.textContent = data.value.toLocaleString('fr-CH') + ' visite' + (data.value > 1 ? 's' : '');
+    }
+  } catch (e) {
+    // Silently fail if API unavailable
+    const el = document.getElementById('visitorCounter');
+    if (el) el.style.display = 'none';
+  }
+}
+initVisitorCounter();
+
+</script>
+</body>
+</html>
